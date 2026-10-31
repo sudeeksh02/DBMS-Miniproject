@@ -1,0 +1,335 @@
+// Divorce Management System - Prisma Schema
+// Academic DBMS Project (PostgreSQL Relational Core)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  LAWYER
+  CLIENT
+}
+
+enum CaseStatus {
+  REGISTERED
+  UNDER_REVIEW
+  DOCUMENTATION_PENDING
+  MEDIATION
+  HEARING_SCHEDULED
+  SETTLEMENT_NEGOTIATION
+  AWAITING_FINAL_ORDER
+  RESOLVED
+  CLOSED
+}
+
+enum CasePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum PartyRole {
+  PETITIONER
+  RESPONDENT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum HearingType {
+  PRELIMINARY
+  MEDIATION_SESSION
+  EVIDENCE_PRESENTATION
+  CROSS_EXAMINATION
+  FINAL_ARGUMENTS
+  JUDGMENT_PRONOUNCEMENT
+}
+
+enum HearingOutcome {
+  SCHEDULED
+  ADJOURNED
+  SETTLEMENT_REACHED
+  ORDER_PASSED
+  DISMISSED
+  CONCLUDED
+}
+
+enum SettlementType {
+  LUMP_SUM
+  MONTHLY_ALIMONY
+  CHILD_SUPPORT
+  PROPERTY_DIVISION
+  HYBRID
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIALLY_PAID
+  COMPLETED
+  DEFAULTED
+}
+
+enum CustodyType {
+  SOLE_PETITIONER
+  SOLE_RESPONDENT
+  JOINT_LEGAL
+  SHARED_PHYSICAL
+  THIRD_PARTY_GUARDIAN
+}
+
+enum ResourceCategory {
+  STATUTE
+  PROCEDURAL_GUIDE
+  PRECEDENT
+  DOCUMENT_TEMPLATE
+  ALIMONY_CALCULATOR_GUIDE
+}
+
+// 1. Users Table
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  role          Role      @default(CLIENT)
+  fullName      String    @map("full_name")
+  phoneNumber   String?   @map("phone_number")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  lawyerProfile Lawyer?
+  clientProfile Client?
+
+  @@map("users")
+}
+
+// 2. Lawyers Table
+model Lawyer {
+  id              String         @id @default(uuid())
+  userId          String         @unique @map("user_id")
+  barRegistration String         @unique @map("bar_registration_number")
+  specialization  String         @default("Family Law")
+  yearsExperience Int            @default(1) @map("years_experience")
+  officeAddress   String?        @map("office_address")
+  hourlyRate      Decimal?       @map("hourly_rate") @db.Decimal(10, 2)
+  maxCaseCapacity Int            @default(15) @map("max_case_capacity")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caseAssignments CaseLawyer[]
+  hearings        Hearing[]
+
+  @@map("lawyers")
+}
+
+// 3. Clients Table
+model Client {
+  id              String         @id @default(uuid())
+  userId          String         @unique @map("user_id")
+  nationalId      String?        @unique @map("national_id")
+  address         String?
+  occupation      String?
+  annualIncome    Decimal?       @map("annual_income") @db.Decimal(12, 2)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partyProfiles   CaseParty[]
+
+  @@map("clients")
+}
+
+// 4. Divorce Cases Table
+model DivorceCase {
+  id              String         @id @default(uuid())
+  referenceNumber String         @unique @map("reference_number")
+  caseTitle       String         @map("case_title")
+  divorceCategory String         @default("Mutual Consent") @map("divorce_category") // Mutual Consent, Contested - Cruelty, Adultery, Desertion
+  filingDate      DateTime       @default(now()) @map("filing_date")
+  marriageDate    DateTime       @map("marriage_date")
+  marriagePlace   String?        @map("marriage_place")
+  separationDate  DateTime?      @map("separation_date")
+  status          CaseStatus     @default(REGISTERED)
+  priority        CasePriority   @default(MEDIUM)
+  presidingCourt  String         @default("Family Court Division 1") @map("presiding_court")
+  resolutionDate  DateTime?      @map("resolution_date")
+  notes           String?
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  parties         CaseParty[]
+  assignedLawyers CaseLawyer[]
+  hearings        Hearing[]
+  settlement      Settlement?
+  custodyArrangement CustodyArrangement?
+  statusHistory   CaseStatusHistory[]
+
+  @@index([status])
+  @@index([filingDate])
+  @@index([priority])
+  @@map("divorce_cases")
+}
+
+// 5. Case Parties Table (Petitioner and Respondent)
+model CaseParty {
+  id              String         @id @default(uuid())
+  caseId          String         @map("case_id")
+  clientId        String?        @map("client_id")
+  partyRole       PartyRole      @map("party_role")
+  fullName        String         @map("full_name")
+  gender          Gender         @default(OTHER)
+  dateOfBirth     DateTime?      @map("date_of_birth")
+  email           String?
+  phoneNumber     String?        @map("phone_number")
+  currentAddress  String?        @map("current_address")
+  employment      String?
+  monthlyIncome   Decimal?       @map("monthly_income") @db.Decimal(10, 2)
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  case            DivorceCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  client          Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@unique([caseId, partyRole])
+  @@map("case_parties")
+}
+
+// 6. Case Lawyers Assignment (Many-to-Many with metadata)
+model CaseLawyer {
+  id              String         @id @default(uuid())
+  caseId          String         @map("case_id")
+  lawyerId        String         @map("lawyer_id")
+  representingRole PartyRole     @default(PETITIONER) @map("representing_role")
+  assignedAt      DateTime       @default(now()) @map("assigned_at")
+  isLeadCounsel   Boolean        @default(true) @map("is_lead_counsel")
+  isActive        Boolean        @default(true) @map("is_active")
+
+  case            DivorceCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  lawyer          Lawyer         @relation(fields: [lawyerId], references: [id], onDelete: Restrict)
+
+  @@unique([caseId, lawyerId, representingRole])
+  @@map("case_lawyers")
+}
+
+// 7. Court Hearings Table
+model Hearing {
+  id              String         @id @default(uuid())
+  caseId          String         @map("case_id")
+  assignedLawyerId String?       @map("assigned_lawyer_id")
+  hearingDate     DateTime       @map("hearing_date")
+  courtRoom       String         @default("Court Hall 3") @map("court_room")
+  judgeName       String         @default("Hon. Justice M. Rao") @map("judge_name")
+  hearingType     HearingType    @default(PRELIMINARY) @map("hearing_type")
+  outcome         HearingOutcome @default(SCHEDULED)
+  summaryNotes    String?        @map("summary_notes")
+  nextHearingDate DateTime?      @map("next_hearing_date")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  case            DivorceCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  assignedLawyer  Lawyer?        @relation(fields: [assignedLawyerId], references: [id], onDelete: SetNull)
+
+  @@index([hearingDate])
+  @@index([caseId])
+  @@map("hearings")
+}
+
+// 8. Financial Settlements Table
+model Settlement {
+  id              String         @id @default(uuid())
+  caseId          String         @unique @map("case_id")
+  settlementType  SettlementType @default(LUMP_SUM) @map("settlement_type")
+  totalAgreedAmount Decimal      @default(0) @map("total_agreed_amount") @db.Decimal(12, 2)
+  monthlyAlimony  Decimal        @default(0) @map("monthly_alimony") @db.Decimal(10, 2)
+  alimonyTenureMonths Int        @default(0) @map("alimony_tenure_months")
+  paymentStatus   PaymentStatus  @default(PENDING) @map("payment_status")
+  termsConditions String?        @map("terms_conditions")
+  settlementDate  DateTime?      @map("settlement_date")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  case            DivorceCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  payments        Payment[]
+
+  @@map("settlements")
+}
+
+// 9. Payment Records Table
+model Payment {
+  id              String         @id @default(uuid())
+  settlementId    String         @map("settlement_id")
+  amountPaid      Decimal        @map("amount_paid") @db.Decimal(10, 2)
+  paymentDate     DateTime       @default(now()) @map("payment_date")
+  paymentMethod   String         @default("Bank Transfer") @map("payment_method")
+  transactionRef  String         @unique @map("transaction_reference")
+  receiptNotes    String?        @map("receipt_notes")
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  settlement      Settlement     @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+// 10. Child Custody Arrangements Table
+model CustodyArrangement {
+  id              String         @id @default(uuid())
+  caseId          String         @unique @map("case_id")
+  custodyType     CustodyType    @default(JOINT_LEGAL) @map("custody_type")
+  numberOfChildren Int           @default(1) @map("number_of_children")
+  childrenDetails String?        @map("children_details") // JSON or text: Names, ages, schools
+  visitationSchedule String?     @map("visitation_schedule")
+  monthlySupportAmount Decimal   @default(0) @map("monthly_support_amount") @db.Decimal(10, 2)
+  specialConditions String?      @map("special_conditions")
+  isAgreed        Boolean        @default(false) @map("is_agreed")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  case            DivorceCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("custody_arrangements")
+}
+
+// 11. Case Status History (Maintained automatically by Triggers)
+model CaseStatusHistory {
+  id              String         @id @default(uuid())
+  caseId          String         @map("case_id")
+  previousStatus  String?        @map("previous_status")
+  newStatus       String         @map("new_status")
+  changedByUserId String?        @map("changed_by_user_id")
+  reason          String?
+  changedAt       DateTime       @default(now()) @map("changed_at")
+
+  case            DivorceCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([changedAt])
+  @@map("case_status_history")
+}
+
+// 12. Legal Resources for Semantic Search (pgvector)
+model LegalResource {
+  id              String           @id @default(uuid())
+  title           String
+  category        ResourceCategory @default(STATUTE)
+  citation        String?
+  content         String
+  summary         String?
+  tags            String[]
+  // In pure PostgreSQL with pgvector, embedding is vector(384). Represented as Float[] in Prisma
+  embedding       Float[]
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("legal_resources")
+}
