@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import db from '@/lib/db/postgres';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, authErrorStatus } from '@/lib/auth';
 
 const createCaseSchema = z.object({
   caseTitle: z.string().min(5, 'Case title must have at least 5 characters'),
@@ -68,8 +68,14 @@ export async function GET(request: Request) {
       FROM divorce_cases c
       LEFT JOIN case_parties p_pet ON c.id = p_pet.case_id AND p_pet.party_role = 'PETITIONER'
       LEFT JOIN case_parties p_resp ON c.id = p_resp.case_id AND p_resp.party_role = 'RESPONDENT'
-      LEFT JOIN case_lawyers cl ON c.id = cl.case_id AND cl.is_lead_counsel = TRUE AND cl.is_active = TRUE
-      LEFT JOIN lawyers l ON cl.lawyer_id = l.id
+      LEFT JOIN LATERAL (
+        SELECT cl.lawyer_id
+        FROM case_lawyers cl
+        WHERE cl.case_id = c.id AND cl.is_lead_counsel = TRUE AND cl.is_active = TRUE
+        ORDER BY (cl.representing_role = 'PETITIONER') DESC, cl.assigned_at ASC
+        LIMIT 1
+      ) lead ON TRUE
+      LEFT JOIN lawyers l ON lead.lawyer_id = l.id
       LEFT JOIN users u_lawyer ON l.user_id = u_lawyer.id
       WHERE 1=1
     `;
@@ -113,7 +119,7 @@ export async function GET(request: Request) {
     console.error('Fetch cases error:', error);
     return NextResponse.json(
       { error: 'Failed to retrieve divorce cases', message: error.message },
-      { status: error.message.includes('UNAUTHORIZED') ? 401 : error.message.includes('FORBIDDEN') ? 403 : 500 }
+      { status: authErrorStatus(error) }
     );
   }
 }
@@ -252,7 +258,7 @@ export async function POST(request: Request) {
     console.error('Case registration transaction failed:', error);
     return NextResponse.json(
       { error: 'Transaction failed. All changes rolled back.', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

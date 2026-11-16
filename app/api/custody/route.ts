@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import db from '@/lib/db/postgres';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, authErrorStatus, assertCaseAccess } from '@/lib/auth';
 
 const custodySchema = z.object({
   caseId: z.string().min(1, 'Case ID is required'),
@@ -19,7 +19,7 @@ const custodySchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await requireAuth();
+    const user = await requireAuth();
     const { searchParams } = new URL(request.url);
     const caseId = searchParams.get('caseId');
 
@@ -35,6 +35,23 @@ export async function GET(request: Request) {
     `;
 
     const params: any[] = [];
+
+    // Role-based scoping: clients see only their own cases, lawyers only cases they are assigned to
+    if (user.role === 'CLIENT') {
+      params.push(user.clientId || 'none', user.email);
+      sql += ` AND EXISTS (
+        SELECT 1 FROM case_parties cp
+        WHERE cp.case_id = c.id
+          AND (cp.client_id = $${params.length - 1} OR LOWER(cp.email) = LOWER($${params.length}))
+      )`;
+    } else if (user.role === 'LAWYER') {
+      params.push(user.lawyerId || 'none');
+      sql += ` AND EXISTS (
+        SELECT 1 FROM case_lawyers cl
+        WHERE cl.case_id = c.id AND cl.lawyer_id = $${params.length} AND cl.is_active = TRUE
+      )`;
+    }
+
     if (caseId) {
       params.push(caseId);
       sql += ` AND ca.case_id = $${params.length}`;
@@ -48,7 +65,7 @@ export async function GET(request: Request) {
     console.error('Fetch custody error:', error);
     return NextResponse.json(
       { error: 'Failed to retrieve custody arrangements', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }
@@ -67,6 +84,7 @@ export async function POST(request: Request) {
     }
 
     const data = parsed.data;
+    await assertCaseAccess(user, data.caseId);
 
     const existing = await db.query('SELECT id FROM custody_arrangements WHERE case_id = $1', [data.caseId]);
     const custodyId = existing.rowCount > 0 ? existing.rows[0].id : 'cst-' + Date.now().toString(36);
@@ -139,7 +157,7 @@ export async function POST(request: Request) {
     console.error('Save custody error:', error);
     return NextResponse.json(
       { error: 'Failed to record custody arrangement', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Briefcase,
   Search,
-  Filter,
+  Funnel as Filter,
   Plus,
   RefreshCw,
   ArrowRight,

@@ -24,29 +24,44 @@ class PostgresManager implements IDatabaseClient {
   private isInitialized = false;
   private isUsingPglite = false;
 
-  private async getClient(): Promise<{ type: 'pool' | 'pglite'; client: Pool | PGlite }> {
-    if (this.isInitialized) {
-      if (this.pool) return { type: 'pool', client: this.pool };
-      if (this.pglite) return { type: 'pglite', client: this.pglite };
-    }
+  // Single shared initialisation promise: concurrent first requests must not open
+  // two PGlite instances on the same data directory or bootstrap the schema twice
+  private initPromise: Promise<{ type: 'pool' | 'pglite'; client: Pool | PGlite }> | null = null;
 
+  private getClient(): Promise<{ type: 'pool' | 'pglite'; client: Pool | PGlite }> {
+    if (!this.initPromise) {
+      this.initPromise = this.initialize().catch((err) => {
+        this.initPromise = null; // allow a retry on the next request
+        throw err;
+      });
+    }
+    return this.initPromise;
+  }
+
+  private async initialize(): Promise<{ type: 'pool' | 'pglite'; client: Pool | PGlite }> {
     const databaseUrl = process.env.DATABASE_URL;
 
     // Check if external Postgres is available and requested
     if (databaseUrl && !databaseUrl.includes('placeholder')) {
+      const testPool = new Pool({
+        connectionString: databaseUrl,
+        connectionTimeoutMillis: 3000,
+      });
       try {
-        const testPool = new Pool({
-          connectionString: databaseUrl,
-          connectionTimeoutMillis: 3000,
-        });
         await testPool.query('SELECT 1;');
         this.pool = testPool;
         this.isInitialized = true;
         this.isUsingPglite = false;
         console.log('[PostgreSQL] Connected successfully to external PostgreSQL via DATABASE_URL');
-        return { type: 'pool', client: this.pool };
+        await this.bootstrapSchemaIfEmpty(
+          (sql) => testPool.query(sql).then((r) => r.rows),
+          (sql) => testPool.query(sql).then(() => undefined)
+        );
+        return { type: 'pool', client: testPool };
       } catch (err: any) {
         console.warn('[PostgreSQL] External PostgreSQL connection failed. Falling back to persistent PGlite engine:', err.message);
+        await testPool.end().catch(() => undefined);
+        this.pool = null;
       }
     }
 
@@ -56,32 +71,39 @@ class PostgresManager implements IDatabaseClient {
       fs.mkdirSync(dataDir, { recursive: true });
     }
 
-    this.pglite = new PGlite(dataDir);
+    const pglite = new PGlite(dataDir);
+    this.pglite = pglite;
     this.isInitialized = true;
     this.isUsingPglite = true;
     console.log('[PostgreSQL] Initialized embedded PostgreSQL (PGlite) with storage at:', dataDir);
 
-    await this.bootstrapSchemaIfEmpty();
+    await this.bootstrapSchemaIfEmpty(
+      (sql) => pglite.query(sql).then((r: any) => r.rows || []),
+      (sql) => pglite.exec(sql).then(() => undefined)
+    );
 
-    return { type: 'pglite', client: this.pglite };
+    return { type: 'pglite', client: pglite };
   }
 
-  private async bootstrapSchemaIfEmpty() {
+  // Runs sql/schema.sql + sql/seed.sql once, when the database has no DMS tables yet.
+  // Uses the raw driver callbacks (not this.query) so it can run during initialisation.
+  private async bootstrapSchemaIfEmpty(
+    rawQuery: (sql: string) => Promise<any[]>,
+    rawExec: (sql: string) => Promise<void>
+  ) {
     try {
-      const checkRes = await this.query("SELECT to_regclass('public.divorce_cases') AS tbl;");
-      if (!checkRes.rows[0]?.tbl) {
+      const rows = await rawQuery("SELECT to_regclass('public.divorce_cases') AS tbl;");
+      if (!rows[0]?.tbl) {
         console.log('[PostgreSQL] Database tables not detected. Executing schema.sql bootstrap...');
         const schemaPath = path.join(process.cwd(), 'sql', 'schema.sql');
         if (fs.existsSync(schemaPath)) {
-          const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-          await this.exec(schemaSql);
+          await rawExec(fs.readFileSync(schemaPath, 'utf8'));
           console.log('[PostgreSQL] Schema DDL executed successfully.');
         }
 
         const seedPath = path.join(process.cwd(), 'sql', 'seed.sql');
         if (fs.existsSync(seedPath)) {
-          const seedSql = fs.readFileSync(seedPath, 'utf8');
-          await this.exec(seedSql);
+          await rawExec(fs.readFileSync(seedPath, 'utf8'));
           console.log('[PostgreSQL] Initial seed dataset loaded successfully.');
         }
       }

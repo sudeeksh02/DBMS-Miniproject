@@ -12,7 +12,7 @@ import {
   FileText,
   DollarSign,
   Heart,
-  BarChart3,
+  ChartColumn as BarChart3,
   Search,
   Settings,
   LogOut,
@@ -108,7 +108,7 @@ export function Sidebar({ user }: SidebarProps) {
       roles: ['ADMIN', 'LAWYER'],
     },
     {
-      label: 'Legal Assistant (pgvector)',
+      label: 'Legal Assistant (Vector Search)',
       href: '/semantic-search',
       icon: Search,
       active: pathname.startsWith('/semantic-search'),

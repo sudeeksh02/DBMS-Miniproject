@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { searchLegalResources } from '@/lib/db/vector';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, authErrorStatus } from '@/lib/auth';
 
 const searchSchema = z.object({
   query: z.string().min(2, 'Search query must be at least 2 characters'),
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     console.error('Semantic search error:', error);
     return NextResponse.json(
       { error: 'Semantic vector retrieval failed', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

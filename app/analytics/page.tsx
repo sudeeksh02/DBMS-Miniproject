@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  BarChart3,
+  ChartColumn as BarChart3,
   TrendingUp,
-  PieChart as PieIcon,
+  ChartPie as PieIcon,
   Layers,
   Database,
   Calendar,
-  CheckCircle2,
+  CircleCheck as CheckCircle2,
   RefreshCw,
   Scale,
   DollarSign,

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Scale, Lock, Mail, ArrowRight, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { Scale, Lock, Mail, ArrowRight, ShieldCheck, CircleAlert as AlertCircle, LoaderCircle as Loader2 } from 'lucide-react';
 
 function LoginFormContent() {
   const router = useRouter();

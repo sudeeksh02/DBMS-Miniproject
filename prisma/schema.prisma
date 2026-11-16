@@ -316,7 +316,7 @@ model CaseStatusHistory {
   @@map("case_status_history")
 }
 
-// 12. Legal Resources for Semantic Search (pgvector)
+// 12. Legal Resources for Semantic Search (16-D embeddings as FLOAT8[])
 model LegalResource {
   id              String           @id @default(uuid())
   title           String
@@ -325,7 +325,7 @@ model LegalResource {
   content         String
   summary         String?
   tags            String[]
-  // In pure PostgreSQL with pgvector, embedding is vector(384). Represented as Float[] in Prisma
+  // 16-D embedding stored as FLOAT8[] (DOUBLE PRECISION[]); ranked by fn_cosine_similarity() in SQL
   embedding       Float[]
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")

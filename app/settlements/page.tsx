@@ -6,7 +6,7 @@ import {
   DollarSign,
   TrendingUp,
   CreditCard,
-  CheckCircle2,
+  CircleCheck as CheckCircle2,
   Clock,
   Plus,
   RefreshCw,

@@ -2,23 +2,23 @@
 -- DIVORCE MANAGEMENT SYSTEM (DMS) - SYNTHETIC SEED DATA (DML)
 -- Realistic academic benchmark dataset
 -- Passwords hashed with bcrypt (Default password for all demo accounts: 'Password123!')
--- Hash: $2b$10$wE0rNeqYm8Oq5x3z7f6p.eC0P9kM8gWfX4p0e1gY3sT2d8mJq0k12
+-- Hash: $2b$10$n2DVQjWy2Zhnz46xnXaYqeR7SzSH1biSNgVbaPZb9uuXn0KuHKA7m
 -- ============================================================================
 
 -- 1. USERS SEED (Admin, Lawyers, Clients)
 INSERT INTO users (id, email, password_hash, role, full_name, phone_number, is_active, created_at)
 VALUES 
     -- Admin
-    ('usr-admin-001', 'admin@divorcems.gov.in', '$2b$10$wE0rNeqYm8Oq5x3z7f6p.eC0P9kM8gWfX4p0e1gY3sT2d8mJq0k12', 'ADMIN', 'Advocate Rajeshwari Sen (Registrar)', '+91 98765 43210', TRUE, NOW() - INTERVAL '90 days'),
+    ('usr-admin-001', 'admin@divorcems.gov.in', '$2b$10$n2DVQjWy2Zhnz46xnXaYqeR7SzSH1biSNgVbaPZb9uuXn0KuHKA7m', 'ADMIN', 'Advocate Rajeshwari Sen (Registrar)', '+91 98765 43210', TRUE, NOW() - INTERVAL '90 days'),
     -- Lawyers
-    ('usr-law-001', 'vikram.mehta@legalfirm.in', '$2b$10$wE0rNeqYm8Oq5x3z7f6p.eC0P9kM8gWfX4p0e1gY3sT2d8mJq0k12', 'LAWYER', 'Adv. Vikram Mehta', '+91 98201 11223', TRUE, NOW() - INTERVAL '80 days'),
-    ('usr-law-002', 'ananya.deshmukh@lawchambers.in', '$2b$10$wE0rNeqYm8Oq5x3z7f6p.eC0P9kM8gWfX4p0e1gY3sT2d8mJq0k12', 'LAWYER', 'Adv. Ananya Deshmukh', '+91 98450 33445', TRUE, NOW() - INTERVAL '75 days'),
-    ('usr-law-003', 'kavita.sharma@familyadvocates.org', '$2b$10$wE0rNeqYm8Oq5x3z7f6p.eC0P9kM8gWfX4p0e1gY3sT2d8mJq0k12', 'LAWYER', 'Adv. Kavita Sharma', '+91 97110 55667', TRUE, NOW() - INTERVAL '70 days'),
+    ('usr-law-001', 'vikram.mehta@legalfirm.in', '$2b$10$n2DVQjWy2Zhnz46xnXaYqeR7SzSH1biSNgVbaPZb9uuXn0KuHKA7m', 'LAWYER', 'Adv. Vikram Mehta', '+91 98201 11223', TRUE, NOW() - INTERVAL '80 days'),
+    ('usr-law-002', 'ananya.deshmukh@lawchambers.in', '$2b$10$n2DVQjWy2Zhnz46xnXaYqeR7SzSH1biSNgVbaPZb9uuXn0KuHKA7m', 'LAWYER', 'Adv. Ananya Deshmukh', '+91 98450 33445', TRUE, NOW() - INTERVAL '75 days'),
+    ('usr-law-003', 'kavita.sharma@familyadvocates.org', '$2b$10$n2DVQjWy2Zhnz46xnXaYqeR7SzSH1biSNgVbaPZb9uuXn0KuHKA7m', 'LAWYER', 'Adv. Kavita Sharma', '+91 97110 55667', TRUE, NOW() - INTERVAL '70 days'),
     -- Clients
-    ('usr-cli-001', 'arjun.kapoor@example.com', '$2b$10$wE0rNeqYm8Oq5x3z7f6p.eC0P9kM8gWfX4p0e1gY3sT2d8mJq0k12', 'CLIENT', 'Arjun Kapoor', '+91 99001 23456', TRUE, NOW() - INTERVAL '60 days'),
-    ('usr-cli-002', 'priya.sharma@example.com', '$2b$10$wE0rNeqYm8Oq5x3z7f6p.eC0P9kM8gWfX4p0e1gY3sT2d8mJq0k12', 'CLIENT', 'Priya Sharma Kapoor', '+91 99002 34567', TRUE, NOW() - INTERVAL '60 days'),
-    ('usr-cli-003', 'rohit.verma@example.com', '$2b$10$wE0rNeqYm8Oq5x3z7f6p.eC0P9kM8gWfX4p0e1gY3sT2d8mJq0k12', 'CLIENT', 'Rohit Verma', '+91 99003 45678', TRUE, NOW() - INTERVAL '45 days'),
-    ('usr-cli-004', 'sneha.iyer@example.com', '$2b$10$wE0rNeqYm8Oq5x3z7f6p.eC0P9kM8gWfX4p0e1gY3sT2d8mJq0k12', 'CLIENT', 'Sneha Iyer Verma', '+91 99004 56789', TRUE, NOW() - INTERVAL '45 days')
+    ('usr-cli-001', 'arjun.kapoor@example.com', '$2b$10$n2DVQjWy2Zhnz46xnXaYqeR7SzSH1biSNgVbaPZb9uuXn0KuHKA7m', 'CLIENT', 'Arjun Kapoor', '+91 99001 23456', TRUE, NOW() - INTERVAL '60 days'),
+    ('usr-cli-002', 'priya.sharma@example.com', '$2b$10$n2DVQjWy2Zhnz46xnXaYqeR7SzSH1biSNgVbaPZb9uuXn0KuHKA7m', 'CLIENT', 'Priya Sharma Kapoor', '+91 99002 34567', TRUE, NOW() - INTERVAL '60 days'),
+    ('usr-cli-003', 'rohit.verma@example.com', '$2b$10$n2DVQjWy2Zhnz46xnXaYqeR7SzSH1biSNgVbaPZb9uuXn0KuHKA7m', 'CLIENT', 'Rohit Verma', '+91 99003 45678', TRUE, NOW() - INTERVAL '45 days'),
+    ('usr-cli-004', 'sneha.iyer@example.com', '$2b$10$n2DVQjWy2Zhnz46xnXaYqeR7SzSH1biSNgVbaPZb9uuXn0KuHKA7m', 'CLIENT', 'Sneha Iyer Verma', '+91 99004 56789', TRUE, NOW() - INTERVAL '45 days')
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. LAWYERS SEED
@@ -90,7 +90,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- 5. CASE PARTIES SEED
-INSERT INTO case_parties (id, case_id, client_id, party_role, full_name, gender, dateOfBirth, email, phone_number, current_address, employment, monthly_income)
+INSERT INTO case_parties (id, case_id, client_id, party_role, full_name, gender, date_of_birth, email, phone_number, current_address, employment, monthly_income)
 VALUES
     -- Case 1 parties
     ('pty-001', 'cas-001', 'cli-001', 'PETITIONER', 'Arjun Kapoor', 'MALE', '1989-05-14', 'arjun.kapoor@example.com', '+91 99001 23456', 'Indiranagar, Bengaluru', 'VP Engineering, CloudTech', 230000.00),
@@ -100,7 +100,16 @@ VALUES
     ('pty-004', 'cas-002', 'cli-004', 'RESPONDENT', 'Sneha Iyer Verma', 'FEMALE', '1990-03-19', 'sneha.iyer@example.com', '+91 99004 56789', 'Bandra West, Mumbai', 'Principal Architect', 150000.00),
     -- Case 3 parties
     ('pty-005', 'cas-003', NULL, 'PETITIONER', 'Devendra Joshi', 'MALE', '1985-09-12', 'devendra.j@example.com', '+91 98111 22334', 'Kothrud, Pune', 'Business Owner', 210000.00),
-    ('pty-006', 'cas-003', NULL, 'RESPONDENT', 'Meenakshi Joshi', 'FEMALE', '1988-01-30', 'meenakshi.j@example.com', '+91 98111 33445', 'Aundh, Pune', 'Professor of Economics', 120000.00)
+    ('pty-006', 'cas-003', NULL, 'RESPONDENT', 'Meenakshi Joshi', 'FEMALE', '1988-01-30', 'meenakshi.j@example.com', '+91 98111 33445', 'Aundh, Pune', 'Professor of Economics', 120000.00),
+    -- Case 4 parties (litigants without portal accounts)
+    ('pty-007', 'cas-004', NULL, 'PETITIONER', 'Siddharth Nair', 'MALE', '1990-07-08', 'siddharth.nair@example.com', '+91 98470 11223', 'Kakkanad, Kochi', 'Marine Engineer', 160000.00),
+    ('pty-008', 'cas-004', NULL, 'RESPONDENT', 'Dr. Radhika Nair', 'FEMALE', '1992-02-14', 'radhika.nair@example.com', '+91 98470 22334', 'Edappally, Kochi', 'Consultant Paediatrician', 210000.00),
+    -- Case 5 parties
+    ('pty-009', 'cas-005', NULL, 'PETITIONER', 'Kunal Malhotra', 'MALE', '1993-10-02', 'kunal.malhotra@example.com', '+91 98100 33445', 'DLF Phase 3, Gurugram', 'Product Manager', 175000.00),
+    ('pty-010', 'cas-005', NULL, 'RESPONDENT', 'Tanya Malhotra', 'FEMALE', '1994-05-27', 'tanya.malhotra@example.com', '+91 98100 44556', 'Sector 56, Gurugram', 'Chartered Accountant', 140000.00),
+    -- Case 6 parties
+    ('pty-011', 'cas-006', NULL, 'PETITIONER', 'Manish Bansal', 'MALE', '1991-12-19', 'manish.bansal@example.com', '+91 98140 55667', 'Sector 17, Chandigarh', 'Civil Contractor', 120000.00),
+    ('pty-012', 'cas-006', NULL, 'RESPONDENT', 'Ritu Bansal', 'FEMALE', '1993-03-11', 'ritu.bansal@example.com', '+91 98140 66778', 'Sector 35, Chandigarh', 'School Teacher', 55000.00)
 ON CONFLICT (id) DO NOTHING;
 
 -- 6. CASE LAWYERS SEED
@@ -221,7 +230,10 @@ VALUES
     ('hsh-007', 'cas-003', 'AWAITING_FINAL_ORDER', 'RESOLVED', 'usr-admin-001', 'Final decree of divorce signed by presiding judge', NOW() - INTERVAL '10 days')
 ON CONFLICT (id) DO NOTHING;
 
--- 12. LEGAL RESOURCES SEED (For pgvector Semantic Retrieval)
+-- 12. LEGAL RESOURCES SEED (For vector semantic retrieval)
+-- Each embedding is generated by generateLegalEmbedding() in lib/db/vector.ts from the
+-- resource's title + summary + tags + content, so stored vectors and query vectors share
+-- the same 16-dimensional legal ontology (see lib/constants/vector.ts).
 INSERT INTO legal_resources (id, title, category, citation, content, summary, tags, embedding)
 VALUES
     (
@@ -232,7 +244,7 @@ VALUES
         'A petition for dissolution of marriage by a decree of divorce may be presented to the district court by both the parties to a marriage together on the ground that they have been living separately for a period of one year or more, that they have not been able to live together and that they have mutually agreed that the marriage should be dissolved. On motion made by both parties between 6 to 18 months after filing (waivable under Supreme Court Amardeep Singh precedent), court grants decree.',
         'Explains statutory criteria, separation period requirement and the 6-month cooling off waiver for mutual consent divorce.',
         ARRAY['mutual consent', 'section 13b', 'cooling off waiver', 'hindu marriage act', 'amicable separation'],
-        ARRAY[0.12, 0.45, 0.82, -0.31, 0.54, 0.19, -0.05, 0.67, 0.23, 0.41, 0.15, -0.22, 0.38, 0.71, 0.11, 0.04]
+        ARRAY[0.5354, 0.1841, 0.0167, 0.0167, 0.0167, 0.4183, 0.5354, 0.0167, 0.0167, 0.1841, 0.3012, 0.0167, 0.0167, 0.0167, 0.0167, 0.3012]
     ),
     (
         'res-002',
@@ -242,7 +254,7 @@ VALUES
         'The Supreme Court laid down comprehensive guidelines for uniform calculation of interim and permanent maintenance. Mandatory disclosure of assets and liabilities through standardized affidavit. Factors include status of parties, reasonable needs of wife and children, applicant income and capacity, liabilities, standard of living enjoyed during matrimonial cohabitation.',
         'Establishes binding formula and mandatory disclosure of assets/liabilities for maintenance determination.',
         ARRAY['alimony', 'maintenance', 'rajnesh v neha', 'income affidavit', 'financial disclosure'],
-        ARRAY[0.34, 0.78, 0.12, 0.55, -0.19, 0.44, 0.62, 0.11, -0.28, 0.81, 0.33, 0.05, 0.49, 0.27, -0.14, 0.68]
+        ARRAY[0.0181, 0.0181, 0.5777, 0.325, 0.1986, 0.0181, 0.0181, 0.0181, 0.0181, 0.1986, 0.1986, 0.0181, 0.0181, 0.5777, 0.0181, 0.325]
     ),
     (
         'res-003',
@@ -252,7 +264,7 @@ VALUES
         'In deciding custody matters, the paramount consideration is exclusively the welfare of the minor child. Financial superiority of one parent does not automatically entitle them to custody. Courts examine emotional bonding, age, educational continuity, moral upbringing, child preference if intelligent enough, and healthy parental visitation access to ensure child is not alienated from either parent.',
         'Principles governing child custody disputes prioritizing child welfare over parental rights.',
         ARRAY['child custody', 'welfare of child', 'visitation rights', 'joint custody', 'guardianship'],
-        ARRAY[0.65, 0.22, 0.41, 0.88, 0.03, -0.37, 0.19, 0.51, 0.74, 0.18, -0.11, 0.49, 0.22, 0.63, 0.35, -0.29]
+        ARRAY[0.0207, 0.2274, 0.0207, 0.8064, 0.0207, 0.0207, 0.0207, 0.0207, 0.0207, 0.0207, 0.2274, 0.0207, 0.3722, 0.2274, 0.2274, 0.0207]
     ),
     (
         'res-004',
@@ -262,7 +274,7 @@ VALUES
         'Standard draft agreement covering: 1. Declaration of irrevocable breakdown. 2. Waiver of claims past, present, future. 3. Real estate and movable asset division. 4. Gold and jewellery streedhan return schedule. 5. Child custody, primary residence and visitation protocol. 6. Payment schedule of permanent alimony with penal default clause. 7. Undertaking to withdraw all pending civil/criminal complaints.',
         'Complete clauses checklist for drafting binding divorce settlement agreements.',
         ARRAY['template', 'settlement agreement', 'streedhan', 'clauses', 'asset division'],
-        ARRAY[0.19, 0.51, 0.73, 0.24, 0.62, 0.35, -0.12, 0.48, 0.39, 0.58, 0.29, -0.08, 0.61, 0.44, 0.17, 0.32]
+        ARRAY[0.0174, 0.1913, 0.313, 0.313, 0.5564, 0.1913, 0.0174, 0.0174, 0.0174, 0.0174, 0.1913, 0.0174, 0.1913, 0.0174, 0.5564, 0.1913]
     ),
     (
         'res-005',
@@ -272,6 +284,6 @@ VALUES
         'Applies to civil marriages registered irrespective of religion. Parties must have lived separately for not less than one year, mutually agree that marriage cannot be salvaged. Petition presented jointly in district court having jurisdiction where marriage was solemnized or where respondent resides or where parties last resided together.',
         'Legal provisions and jurisdictional requirements for divorce under the Special Marriage Act.',
         ARRAY['special marriage act', 'civil marriage', 'secular divorce', 'section 28', 'jurisdiction'],
-        ARRAY[0.28, 0.41, 0.69, -0.15, 0.47, 0.26, 0.08, 0.59, 0.31, 0.49, 0.18, -0.14, 0.42, 0.65, 0.21, 0.12]
+        ARRAY[0.4039, 0.0224, 0.0224, 0.0224, 0.0224, 0.0224, 0.0224, 0.7181, 0.0224, 0.0224, 0.561, 0.0224, 0.0224, 0.0224, 0.0224, 0.0224]
     )
 ON CONFLICT (id) DO NOTHING;

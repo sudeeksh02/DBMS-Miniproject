@@ -73,7 +73,7 @@ ORDER BY h.hearing_date ASC;
 -- ============================================================================
 -- QUERY 4: GROUP BY with HAVING - Lawyers Managing Multiple High-Priority Cases
 -- Concept: GROUP BY, COUNT aggregate, HAVING clause filter
--- Purpose: Identifies legal counsel managing more than 1 case with high/urgent priority
+-- Purpose: Identifies legal counsel managing 2 or more open cases with high/urgent priority
 -- ============================================================================
 SELECT 
     l.id AS lawyer_id,
@@ -88,7 +88,7 @@ INNER JOIN divorce_cases c ON cl.case_id = c.id
 WHERE c.priority IN ('HIGH', 'URGENT') 
   AND c.status NOT IN ('RESOLVED', 'CLOSED')
 GROUP BY l.id, u.full_name, l.bar_registration_number
-HAVING COUNT(c.id) >= 1
+HAVING COUNT(c.id) >= 2
 ORDER BY urgent_case_count DESC;
 
 -- ============================================================================
@@ -278,9 +278,9 @@ WHERE cp.email IS NOT NULL
 ORDER BY contact_name ASC;
 
 -- ============================================================================
--- QUERY 15: COMPLEX SUBQUERY WITH HAVING - Custody Arranged with High Maintenance
--- Concept: Nested subquery, aggregation, JOIN, filter on calculated parent metrics
--- Purpose: Finds child custody records where monthly support exceeds the citywide average
+-- QUERY 15: SCALAR SUBQUERY WITH AGGREGATE - Custody Arranged with High Maintenance
+-- Concept: Uncorrelated scalar subquery (AVG) used as a filter threshold, with JOIN
+-- Purpose: Finds child custody records where monthly support exceeds the average across all arrangements
 -- ============================================================================
 SELECT 
     c.reference_number,
@@ -298,8 +298,8 @@ WHERE ca.monthly_support_amount > (
 ORDER BY ca.monthly_support_amount DESC;
 
 -- ============================================================================
--- QUERY 16: ADVANCED AUDIT TRAIL - Historical Status Progression per Case
--- Concept: Self-referential status audit log tracking timing between transitions
+-- QUERY 16: WINDOW FUNCTION (LAG) - Historical Status Progression per Case
+-- Concept: LAG() OVER (PARTITION BY case ORDER BY time) on the trigger-populated audit table
 -- Purpose: Measures procedural latency between consecutive case milestones
 -- ============================================================================
 SELECT 

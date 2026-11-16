@@ -12,9 +12,9 @@ import {
   ArrowRight,
   ShieldAlert,
   Clock,
-  CheckCircle2,
+  CircleCheck as CheckCircle2,
   Send,
-  Loader2,
+  LoaderCircle as Loader2,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { StatusBadge } from '@/components/ui/StatusBadge';

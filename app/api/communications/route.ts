@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, authErrorStatus } from '@/lib/auth';
 
 const messageSchema = z.object({
   caseId: z.string().min(1, 'Case ID is required'),
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ communications: comms });
   } catch (error: any) {
     console.error('Fetch communications error:', error);
-    return NextResponse.json({ error: 'Failed to fetch messages', message: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch messages', message: error.message }, { status: authErrorStatus(error, 500) });
   }
 }
 
@@ -65,6 +65,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, communication: comm });
   } catch (error: any) {
     console.error('Save communication error:', error);
-    return NextResponse.json({ error: 'Failed to send communication', message: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to send communication', message: error.message }, { status: authErrorStatus(error, 500) });
   }
 }

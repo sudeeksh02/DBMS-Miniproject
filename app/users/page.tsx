@@ -7,10 +7,10 @@ import {
   Plus,
   RefreshCw,
   Search,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Loader2,
+  CircleCheck as CheckCircle2,
+  CircleX as XCircle,
+  CircleAlert as AlertCircle,
+  LoaderCircle as Loader2,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';

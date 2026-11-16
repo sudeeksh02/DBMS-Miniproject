@@ -9,11 +9,11 @@ import {
   User,
   Calendar,
   Building,
-  CheckCircle2,
+  CircleCheck as CheckCircle2,
   ArrowRight,
   ArrowLeft,
-  AlertCircle,
-  Loader2,
+  CircleAlert as AlertCircle,
+  LoaderCircle as Loader2,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';

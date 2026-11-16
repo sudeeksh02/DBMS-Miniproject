@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Scale, Lock, Mail, User, Phone, Home, Briefcase, IndianRupee, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Scale, Lock, Mail, User, Phone, House as Home, Briefcase, IndianRupee, ArrowRight, CircleAlert as AlertCircle, LoaderCircle as Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();

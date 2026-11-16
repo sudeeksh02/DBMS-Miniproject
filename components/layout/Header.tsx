@@ -30,7 +30,7 @@ export function Header({ title, subtitle, user, actions }: HeaderProps) {
           className="hidden md:flex items-center space-x-2 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors"
         >
           <Search className="w-3.5 h-3.5 text-slate-500" />
-          <span>Semantic Search (pgvector)</span>
+          <span>Semantic Search (Vector)</span>
         </Link>
 
         {/* Database Status Pills */}
@@ -40,7 +40,7 @@ export function Header({ title, subtitle, user, actions }: HeaderProps) {
           <span className="text-slate-300">|</span>
           <span className="font-semibold text-emerald-700">MongoDB</span>
           <span className="text-slate-300">|</span>
-          <span className="font-semibold text-purple-700">pgvector</span>
+          <span className="font-semibold text-purple-700">Vector Search</span>
         </div>
 
         {/* User Role Badge */}

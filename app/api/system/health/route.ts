@@ -22,7 +22,7 @@ export async function GET() {
       console.error('Postgres health check error:', e.message);
     }
 
-    // Check Legal Resources (pgvector)
+    // Check Legal Resources (vector search corpus)
     let vectorCount = 0;
     try {
       const res = await db.query('SELECT COUNT(*) AS count FROM legal_resources;');
@@ -56,7 +56,7 @@ export async function GET() {
           status: vectorCount > 0 ? 'ACTIVE' : 'READY',
           indexedResources: vectorCount,
           dimensions: 16,
-          similarityMetric: 'Cosine Similarity (fn_cosine_similarity / <=>)',
+          similarityMetric: 'Cosine Similarity (fn_cosine_similarity over FLOAT8[])',
         },
       },
     });

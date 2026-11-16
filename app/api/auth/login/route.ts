@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import db from '@/lib/db/postgres';
 import mongo from '@/lib/db/mongodb';
-import { verifyPassword, createSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
+import { verifyPassword, createSessionToken, SESSION_COOKIE_NAME, authErrorStatus } from '@/lib/auth';
 
 const loginSchema = z.object({
   email: z.string().email('Please provide a valid email address'),
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
     console.error('Login error:', error);
     return NextResponse.json(
       { error: 'Internal server error during authentication', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

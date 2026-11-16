@@ -11,7 +11,7 @@ import {
   Layers,
   ShieldAlert,
   ArrowRight,
-  Loader2,
+  LoaderCircle as Loader2,
   ChevronRight,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
@@ -65,7 +65,7 @@ export default function SemanticSearchPage() {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Header
-          title="Legal AI Assistant & Semantic Search (pgvector)"
+          title="Legal AI Assistant & Semantic Search (Vector)"
           subtitle="Vector similarity retrieval across matrimonial statutes, judicial precedents, and mediation forms"
         />
 
@@ -78,13 +78,13 @@ export default function SemanticSearchPage() {
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold">Vector Database Architecture (pgvector Cosine Metric)</h2>
+                  <h2 className="text-base font-bold">Vector Search Architecture (Cosine Similarity in PostgreSQL)</h2>
                   <span className="text-[10px] font-mono bg-purple-400/20 text-purple-200 px-2 py-0.5 rounded border border-purple-400/30">
                     16-D Unit Hypersphere
                   </span>
                 </div>
                 <p className="text-xs text-purple-200/90 leading-relaxed">
-                  Queries are projected into a 16-dimensional ontological legal vector space. Similarity is evaluated using PostgreSQL's <code className="font-mono text-amber-300">fn_cosine_similarity(embedding, $1::float8[])</code> and pgvector <code className="font-mono text-amber-300">&lt;=&gt;</code> cosine distance operators.
+                  Queries are projected into a 16-dimensional ontological legal vector space. Similarity is evaluated using PostgreSQL's <code className="font-mono text-amber-300">fn_cosine_similarity(embedding, $1::float8[])</code>, a PL/pgSQL function over <code className="font-mono text-amber-300">FLOAT8[]</code> embeddings (the same metric as pgvector's <code className="font-mono text-amber-300">&lt;=&gt;</code> cosine distance, without needing the extension).
                 </p>
               </div>
             </div>

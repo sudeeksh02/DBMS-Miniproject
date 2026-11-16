@@ -4,13 +4,14 @@ import { LEGAL_DIMENSIONS, LegalSearchResult } from '@/lib/constants/vector';
 export { LEGAL_DIMENSIONS };
 export type { LegalSearchResult };
 
-// pgvector Semantic Retrieval Engine & Legal Knowledge Vectorizer
+// Vector Semantic Retrieval Engine & Legal Knowledge Vectorizer
+// Embeddings are stored as FLOAT8[] and ranked with the PL/pgSQL fn_cosine_similarity() function
+// (same metric as pgvector's <=> operator, but runs on any PostgreSQL / PGlite without the extension)
 // Implements vector generation, cosine similarity retrieval, and domain ontology mapping
 
 /**
  * Deterministic Semantic Embedding Vectorizer
  * Maps text query into 16-dimensional unit hypersphere using legal domain ontological token frequencies
- * If an external OpenAI or HuggingFace API key is supplied in OPENAI_API_KEY, can generate remote embeddings.
  */
 export function generateLegalEmbedding(text: string): number[] {
   const normalized = text.toLowerCase();
@@ -111,7 +112,7 @@ export async function searchLegalResources(queryText: string, topK = 5, category
   return {
     results,
     queryVector,
-    retrievalMetric: 'Cosine Similarity (fn_cosine_similarity / pgvector <=> metric)',
+    retrievalMetric: 'Cosine Similarity (fn_cosine_similarity over FLOAT8[])',
     executionTimeMs,
   };
 }

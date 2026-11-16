@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db/postgres';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, authErrorStatus } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -129,7 +129,7 @@ export async function GET() {
     console.error('Analytics aggregation error:', error);
     return NextResponse.json(
       { error: 'Failed to generate database analytics', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

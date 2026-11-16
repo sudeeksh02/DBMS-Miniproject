@@ -4,7 +4,7 @@ import {
   Database,
   Shield,
   FileCheck2,
-  Users2,
+  UsersRound as Users2,
   Sparkles,
   ArrowRight,
   Lock,
@@ -56,7 +56,7 @@ export default async function HomePage() {
             href="/semantic-search"
             className="text-xs text-slate-400 hover:text-white transition-colors hidden sm:inline-block"
           >
-            Legal AI Search (pgvector)
+            Legal AI Search (Vector)
           </Link>
           <Link
             href="/settings"
@@ -96,7 +96,7 @@ export default async function HomePage() {
       <header className="max-w-5xl mx-auto px-6 pt-16 pb-12 text-center flex-1 flex flex-col justify-center items-center">
         <div className="inline-flex items-center gap-2 text-xs font-medium text-amber-400 bg-amber-400/10 border border-amber-400/20 px-3 py-1 rounded-full mb-6">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Multi-Paradigm Database System: PostgreSQL 3NF + MongoDB + pgvector</span>
+          <span>Multi-Paradigm Database System: PostgreSQL 3NF + MongoDB + Vector Search</span>
         </div>
 
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-tight max-w-4xl">
@@ -124,7 +124,7 @@ export default async function HomePage() {
             className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700/80 text-slate-200 font-semibold text-sm px-6 py-3.5 rounded-xl border border-slate-700 transition-all"
           >
             <Database className="w-4 h-4 text-amber-400" />
-            <span>Test pgvector Semantic Search</span>
+            <span>Test Vector Semantic Search</span>
           </Link>
         </div>
 
@@ -237,12 +237,12 @@ export default async function HomePage() {
             </ul>
           </div>
 
-          {/* Card 3: pgvector Semantic Search */}
+          {/* Card 3: Vector Semantic Search */}
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 hover:border-purple-500/40 transition-all">
             <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400 w-fit mb-4">
               <Sparkles className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-white">pgvector Semantic Search</h3>
+            <h3 className="text-lg font-bold text-white">Vector Semantic Search</h3>
             <p className="text-xs text-slate-400 mt-2 leading-relaxed">
               Vector database functionality executing cosine similarity retrieval across Hindu Marriage Act, Special Marriage Act, Supreme Court precedents, and custody formulas.
             </p>
@@ -267,7 +267,7 @@ export default async function HomePage() {
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-[#0B132B] py-6 px-6 text-center text-xs text-slate-500 mt-auto">
         <p>Divorce Management System (DMS) &bull; University DBMS Level 3 Mini-Project</p>
-        <p className="mt-1 text-slate-400">PostgreSQL (3NF) &bull; MongoDB Official Driver &bull; pgvector Semantic Search &bull; Next.js 16 App Router</p>
+        <p className="mt-1 text-slate-400">PostgreSQL (3NF) &bull; MongoDB Official Driver &bull; Vector Semantic Search &bull; Next.js 16 App Router</p>
       </footer>
     </div>
   );

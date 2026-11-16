@@ -8,12 +8,12 @@ import {
   Sparkles,
   ShieldCheck,
   RefreshCw,
-  AlertTriangle,
+  TriangleAlert as AlertTriangle,
   RotateCcw,
-  CheckCircle2,
+  CircleCheck as CheckCircle2,
   Server,
-  Code2,
-  Loader2,
+  CodeXml as Code2,
+  LoaderCircle as Loader2,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -141,14 +141,14 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* pgvector */}
+            {/* Vector search */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <div className="p-2 bg-purple-50 text-purple-600 rounded-xl">
                     <Sparkles className="w-5 h-5" />
                   </div>
-                  <h3 className="font-bold text-slate-900 text-sm">pgvector Vector DB</h3>
+                  <h3 className="font-bold text-slate-900 text-sm">Vector Search Engine</h3>
                 </div>
                 <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
                   {health?.databases?.pgvector?.status || 'ACTIVE'}
@@ -231,7 +231,7 @@ export default function SettingsPage() {
                 </p>
                 <p className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span><strong>Vector Search:</strong> pgvector unit hypersphere cosine similarity search</span>
+                  <span><strong>Vector Search:</strong> 16-D unit-vector cosine similarity computed in PostgreSQL (fn_cosine_similarity)</span>
                 </p>
               </div>
             </div>

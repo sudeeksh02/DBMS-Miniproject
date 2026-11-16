@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db/postgres';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth } from '@/lib/auth';
-import { saveUploadedFile } from '@/lib/storage';
+import { requireAuth, authErrorStatus, assertCaseAccess } from '@/lib/auth';
+import { saveUploadedFile, validateUpload } from '@/lib/storage';
 
 export async function GET(request: Request) {
   try {
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     console.error('Fetch documents error:', error);
     return NextResponse.json(
       { error: 'Failed to retrieve documents', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }
@@ -62,12 +62,20 @@ export async function POST(request: Request) {
       );
     }
 
+    const uploadError = validateUpload(file);
+    if (uploadError) {
+      return NextResponse.json({ error: uploadError }, { status: 400 });
+    }
+
     // Verify case existence
     const caseRes = await db.query('SELECT reference_number FROM divorce_cases WHERE id = $1', [caseId]);
     if (caseRes.rowCount === 0) {
       return NextResponse.json({ error: 'Referenced case does not exist.' }, { status: 404 });
     }
     const caseRef = caseRes.rows[0].reference_number;
+
+    // Lawyers may upload only to assigned cases, clients only to their own cases
+    await assertCaseAccess(user, caseId);
 
     // 1. Save file locally using storage service
     const storedFile = await saveUploadedFile(file);
@@ -112,7 +120,7 @@ export async function POST(request: Request) {
     console.error('Document upload error:', error);
     return NextResponse.json(
       { error: 'Failed to upload document', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

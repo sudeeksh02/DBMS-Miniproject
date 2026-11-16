@@ -1,126 +1,120 @@
 # Divorce Management System (DMS)
-### University Level 3 DBMS Mini-Project
+### DBMS Mini-Project — PES University
 
-A full-stack, enterprise-grade matrimonial case management platform built with **PostgreSQL (3NF Normalized)**, **Prisma ORM**, **MongoDB (Official Driver)**, **pgvector Semantic Retrieval**, and **Next.js 16 (App Router + Turbopack + Tailwind CSS)**.
-
----
-
-## 🌟 Key Features
-
-1. **Dual-Database Polyglot Persistence**:
-   - **PostgreSQL**: 3NF normalized schema across 12 relational entities, foreign keys, triggers, stored procedures, and 4 analytical views.
-   - **MongoDB**: Operational document store for evidence metadata, communications, caucus notes, and a multi-stage `$facet` aggregation pipeline.
-   - **pgvector**: 16-dimensional semantic search over landmark family law precedents and matrimonial statutes using cosine similarity.
-2. **ACID Transactional Guarantees**:
-   - Atomic case registration (petitioner & respondent linking, docket reference generation, and status auditing).
-   - Atomic payment disbursements with settlement balance updates.
-3. **Advanced Database Automations**:
-   - **Trigger (`trg_case_status_audit`)**: Automated audit log of every case status transition into `case_status_history`.
-   - **Stored Procedure (`fn_generate_case_reference`)**: Automated alphanumeric docket generator (`FC-YYYY-XXXXX`).
-   - **Advocate Conflict Detection**: SQL temporal collision query preventing lawyer double-booking within 45-minute hearing intervals.
-4. **16 Complex Demonstration SQL Queries**:
-   - Covering INNER/LEFT JOINs, GROUP BY, HAVING, correlated subqueries, EXISTS/NOT EXISTS, window functions (`ROW_NUMBER`, `DENSE_RANK`, `SUM OVER`), and date arithmetic.
-5. **Role-Based Access Control (RBAC)**:
-   - Dedicated authenticated workstations for **System Administrators**, **Advocates/Lawyers**, and **Litigants/Clients**.
+A full-stack family-court case management system built on a **PostgreSQL relational core (3NF)**, a **MongoDB document store**, and an in-database **16-dimensional vector search** over legal precedents, with a **Next.js 16** (App Router) front end.
 
 ---
 
-## 🚀 Quick Start
+## Key Features
+
+1. **Polyglot persistence**
+   - **PostgreSQL**: 12 relational tables, primary/foreign keys with `CASCADE` / `RESTRICT` / `SET NULL` rules, 25 `CHECK` constraints, 2 composite `UNIQUE` constraints, 4 views, 4 PL/pgSQL functions (2 of them trigger functions), 4 triggers, and single-column plus composite B-tree indexes.
+   - **MongoDB**: activity timelines, case documents, communications, counsel notes and audit logs, plus a multi-branch `$facet` aggregation pipeline. If MongoDB is not running, the app switches automatically to a JSON document store in `./data/mongodb_fallback`.
+   - **Vector search**: 16-D embeddings stored as `FLOAT8[]` and ranked by cosine similarity using the PL/pgSQL function `fn_cosine_similarity()`. This is the same metric as pgvector's `<=>` operator, but it needs no extension, so it also runs on the embedded engine.
+2. **ACID transactions**: case registration (the case, both parties, counsel, and the first history row are written together or not at all), payment recording with automatic settlement-status recalculation, user and lawyer onboarding, and case status updates.
+3. **Database automation**
+   - **Trigger `trg_case_status_audit`**: every status change is written to `case_status_history`, including **who** made the change and **why**. The application passes both values to the trigger as transaction-local settings.
+   - **Function `fn_generate_case_reference()`**: issues sequential docket numbers in the form `DIV-YYYY-NNNN`. Because it uses MAX + 1, a deleted case never causes a duplicate number.
+   - **Advocate conflict detection**: rejects a hearing that falls within **45 minutes** of another scheduled hearing for the same advocate. The check is a range query served by the composite index `(assigned_lawyer_id, hearing_date)`.
+4. **16 demonstration SQL queries** (`sql/demonstration_queries.sql`) cover joins, GROUP BY/HAVING, aggregates, IN/EXISTS/NOT EXISTS, correlated subqueries, CASE, date arithmetic, UNION, and the window functions `ROW_NUMBER`, `DENSE_RANK`, `SUM OVER` and `LAG`.
+5. **11 automated database tests** (`sql/verification_tests.sql`) cover the constraints, trigger, atomicity, cascades, conflict detection, views and vector math.
+6. **Role-based access control**: Admin, Lawyer and Client workspaces. Server-side checks return `401`/`403`. Lawyers can only change cases they are assigned to, and clients can only see their own cases.
+
+---
+
+## Quick Start
 
 ### 1. Prerequisites
-- Node.js 18+ or 20+
-- (Optional) Local PostgreSQL 16+ on port `5432` *(Note: If not configured, DMS automatically uses its built-in persistent PGlite WASM engine in `./data/postgres`)*
-- (Optional) Local MongoDB on `mongodb://127.0.0.1:27017`
+- **Node.js 20.9+** (required by Next.js 16)
+- *(Optional)* PostgreSQL 16+. If `DATABASE_URL` is not set or the server can't be reached, DMS uses its built-in **PGlite** engine (real PostgreSQL compiled to WebAssembly) in `./data/postgres`, and creates and seeds the schema automatically on first run.
+- *(Optional)* MongoDB on `mongodb://127.0.0.1:27017`. If MongoDB is unavailable, the JSON fallback store is used.
 
-### 2. Environment Setup
-Review `.env` (a copy of `.env.example`):
-```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/divorce_db"
-MONGODB_URI="mongodb://127.0.0.1:27017/divorce_management_system"
-JWT_SECRET="super-secret-dms-jwt-token-key-2026-secure"
-PORT=3000
+### 2. Environment (optional)
+```bash
+cp .env.example .env.local
 ```
+Every variable is optional. See `.env.example` for what each one does.
 
-### 3. Install Dependencies & Generate Prisma Client
+### 3. Install and run
 ```bash
 npm install
-npx prisma generate
-```
-
-### 4. Run Development Server
-```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open <http://localhost:3000>.
 
-### 5. Production Build Verification
+> Use `npm install` rather than `npm ci` the first time. The Tailwind build plugin was changed to `@tailwindcss/postcss`, so the lockfile needs to update once.
+
+### 4. Production build
 ```bash
 npm run build
 npm start
 ```
 
+### Resetting the demo data
+If you ran an earlier version of this project, delete the `data/` folder (or, as Admin, use the reset button on the **Settings** page). The embedded database then re-seeds with the corrected data and password hashes.
+
 ---
 
-## 🔑 Demo Login Accounts
+## Demo Login Accounts
 
-| Role | Email | Password |
+All demo accounts use the password **`Password123!`**. The login page has one-click auto-fill buttons for the first three.
+
+| Role | Email | Notes |
 |---|---|---|
-| **Administrator** | `admin@familycourt.gov.in` | `Admin123!` |
-| **Advocate (Senior Counsel)** | `rajesh.sharma@advocates.in` | `Lawyer123!` |
-| **Advocate (Defense Counsel)** | `priya.deshmukh@advocates.in` | `Lawyer123!` |
-| **Litigant (Petitioner)** | `vikram.malhotra@client.in` | `Client123!` |
-| **Litigant (Respondent)** | `ananya.malhotra@client.in` | `Client123!` |
-
-*(The login page features 1-click auto-fill buttons for instant testing).*
+| **Administrator** | `admin@divorcems.gov.in` | Full access |
+| **Advocate** | `vikram.mehta@legalfirm.in` | Assigned to DIV-2026-0001, 0002, 0005 |
+| **Advocate** | `ananya.deshmukh@lawchambers.in` | Assigned to DIV-2026-0002, 0004 |
+| **Advocate** | `kavita.sharma@familyadvocates.org` | Assigned to DIV-2026-0001, 0006 (former counsel on 0003) |
+| **Client (Petitioner)** | `arjun.kapoor@example.com` | Party to DIV-2026-0001 |
+| **Client (Respondent)** | `priya.sharma@example.com` | Party to DIV-2026-0001 |
+| **Client (Petitioner)** | `rohit.verma@example.com` | Party to DIV-2026-0002 |
+| **Client (Respondent)** | `sneha.iyer@example.com` | Party to DIV-2026-0002 |
 
 ---
 
-## 📁 Project Architecture & Directory Layout
+## Running the SQL deliverables directly (psql)
+
+```bash
+createdb dms
+psql -d dms -f sql/schema.sql
+psql -d dms -f sql/seed.sql
+psql -d dms -f sql/demonstration_queries.sql   # 16 queries
+psql -d dms -f sql/verification_tests.sql      # 11 tests, prints PASS for each
+psql -d dms -f sql/reset.sql                   # drops everything
+```
+`schema.sql` and `seed.sql` are idempotent, so running them twice is safe.
+
+---
+
+## Project Layout
 
 ```text
 ├── app/
-│   ├── api/                   # REST API route handlers
-│   │   ├── analytics/         # SQL Aggregates & MongoDB $facet pipeline
-│   │   ├── auth/              # Login, Logout, Register, Me (JWT sessions)
-│   │   ├── cases/             # ACID Case creation & dossier retrieval
-│   │   ├── hearings/          # Hearing docket + Advocate Conflict Detection
-│   │   ├── lawyers/           # Workload metrics view & lawyer creation
-│   │   ├── payments/          # Payment recording & settlement updates
-│   │   ├── semantic-search/   # pgvector cosine similarity endpoint
-│   │   ├── settlements/       # Maintenance schedules & financial ledgers
-│   │   └── system/            # System health & reset diagnostics
-│   ├── admin/dashboard/       # System Administrator overview & metrics
-│   ├── lawyer/dashboard/      # Advocate active docket & assigned cases
-│   ├── client/dashboard/      # Litigant case timeline & financial status
-│   ├── cases/                 # Case list, New Case Wizard, Case Dossier
-│   ├── hearings/              # Courtroom calendar & hearing docket
-│   ├── settlements/           # Alimony & maintenance financial ledger
-│   ├── semantic-search/       # Natural language precedent explorer
-│   └── page.tsx               # Landing page with architecture showcase
-├── components/                # Reusable UI library (Badges, Cards, Layout)
+│   ├── api/                   # REST route handlers (auth, cases, hearings, settlements,
+│   │                          #   payments, custody, documents, notes, communications,
+│   │                          #   lawyers, users, analytics, semantic-search, system)
+│   ├── admin/ lawyer/ client/ # Role dashboards
+│   ├── cases/                 # Case registry, new-case wizard, case dossier
+│   ├── hearings/ settlements/ custody/ analytics/ semantic-search/ users/ settings/
+│   └── page.tsx               # Landing page
+├── components/                # Layout (sidebar, header) and UI widgets
 ├── docs/
-│   ├── ACADEMIC_DOCUMENTATION.md  # 24-section formal academic project report
-│   └── TEAM_CONTRIBUTIONS.md      # 2-member work breakdown matrix
+│   ├── ACADEMIC_DOCUMENTATION.md  # Project report (24 sections)
+│   └── TEAM_CONTRIBUTIONS.md      # Work breakdown
 ├── lib/
-│   ├── db/
-│   │   ├── postgres.ts        # PostgreSQL dual-mode client (PGlite / pg Pool)
-│   │   ├── mongodb.ts         # Official MongoDB client & aggregation engine
-│   │   └── vector.ts          # Semantic vectorizer & cosine similarity
-│   ├── auth.ts                # Bcrypt password hashing & JWT cookie verification
-│   └── storage.ts             # Evidence & document file manager
-├── prisma/
-│   └── schema.prisma          # 3NF Relational Data Model (12 models)
+│   ├── auth.ts                # bcrypt, JWT cookies, requireAuth / assertCaseAccess
+│   ├── storage.ts             # Local evidence file storage (./uploads)
+│   └── db/
+│       ├── postgres.ts        # PostgreSQL client (pg Pool or embedded PGlite)
+│       ├── mongodb.ts         # MongoDB client, JSON fallback, $facet pipeline
+│       └── vector.ts          # 16-D legal embedding + cosine search
+├── prisma/schema.prisma       # Reference data model (schema documentation; the app runs native SQL)
 └── sql/
-    ├── schema.sql             # Full DDL (tables, triggers, views, indexes)
-    ├── seed.sql               # Rich synthetic seed data & vector embeddings
-    ├── demonstration_queries.sql # 16 Advanced Demonstration SQL Queries
-    └── reset.sql              # Clean teardown script
+    ├── schema.sql             # DDL: tables, constraints, indexes, views, functions, triggers
+    ├── seed.sql               # Demo data
+    ├── demonstration_queries.sql
+    ├── verification_tests.sql
+    └── reset.sql
 ```
 
----
-
-## 📊 Academic Deliverables Included
-- **Formal Academic Report**: Available at `docs/ACADEMIC_DOCUMENTATION.md` containing all 24 required sections.
-- **Team Work Breakdown**: Available at `docs/TEAM_CONTRIBUTIONS.md`.
-- **Relational Schema & DDL**: In `sql/schema.sql` and `prisma/schema.prisma`.
-- **Demonstration Queries**: In `sql/demonstration_queries.sql`.
+> **About Prisma:** `prisma/schema.prisma` documents the same data model as schema-as-code. At runtime the application uses hand-written parameterised SQL through `lib/db/postgres.ts`, so you don't need to run `prisma generate` to use the app.

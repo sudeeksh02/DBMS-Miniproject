@@ -10,7 +10,7 @@ import {
   ArrowRight,
   RefreshCw,
   Plus,
-  AlertCircle,
+  CircleAlert as AlertCircle,
   FileCheck2,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';

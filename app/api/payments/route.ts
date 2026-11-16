@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import db from '@/lib/db/postgres';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, authErrorStatus } from '@/lib/auth';
 
 const recordPaymentSchema = z.object({
   settlementId: z.string().min(1, 'Settlement ID is required'),
@@ -38,6 +38,29 @@ export async function POST(request: Request) {
         { error: 'A payment with this transaction reference already exists.' },
         { status: 409 }
       );
+    }
+
+    // Authorization: clients may only pay into settlements of their own case,
+    // lawyers only into settlements of cases they are assigned to
+    if (user.role !== 'ADMIN') {
+      const accessRes = await db.query(
+        user.role === 'CLIENT'
+          ? `SELECT 1 FROM settlements s
+             JOIN case_parties cp ON cp.case_id = s.case_id
+             WHERE s.id = $1 AND (cp.client_id = $2 OR LOWER(cp.email) = LOWER($3))`
+          : `SELECT 1 FROM settlements s
+             JOIN case_lawyers cl ON cl.case_id = s.case_id
+             WHERE s.id = $1 AND cl.lawyer_id = $2 AND cl.is_active = TRUE`,
+        user.role === 'CLIENT'
+          ? [settlementId, user.clientId || 'none', user.email]
+          : [settlementId, user.lawyerId || 'none']
+      );
+      if (accessRes.rowCount === 0) {
+        return NextResponse.json(
+          { error: 'FORBIDDEN: You cannot record payments for this settlement.' },
+          { status: 403 }
+        );
+      }
     }
 
     const paymentId = 'pay-' + Date.now().toString(36);
@@ -123,7 +146,7 @@ export async function POST(request: Request) {
     console.error('Record payment error:', error);
     return NextResponse.json(
       { error: 'Failed to record payment', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

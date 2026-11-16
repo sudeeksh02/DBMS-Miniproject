@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import db from '@/lib/db/postgres';
 import mongo from '@/lib/db/mongodb';
-import { hashPassword, createSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
+import { hashPassword, createSessionToken, SESSION_COOKIE_NAME, authErrorStatus } from '@/lib/auth';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, 'Full name must have at least 2 characters'),
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
     console.error('Registration error:', error);
     return NextResponse.json(
       { error: 'Failed to complete registration', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

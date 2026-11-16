@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import db from '@/lib/db/postgres';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth, hashPassword } from '@/lib/auth';
+import { requireAuth, hashPassword, authErrorStatus } from '@/lib/auth';
 
 const createUserSchema = z.object({
   email: z.string().email(),
@@ -41,7 +41,7 @@ export async function GET() {
     console.error('Fetch users error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch users', message: error.message },
-      { status: 403 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, userId, message: 'User account created.' });
   } catch (error: any) {
     console.error('Create user error:', error);
-    return NextResponse.json({ error: 'Failed to create user', message: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create user', message: error.message }, { status: authErrorStatus(error, 500) });
   }
 }
 
@@ -138,6 +138,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: true, message: 'User updated successfully.' });
   } catch (error: any) {
     console.error('Update user error:', error);
-    return NextResponse.json({ error: 'Failed to update user', message: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update user', message: error.message }, { status: authErrorStatus(error, 500) });
   }
 }

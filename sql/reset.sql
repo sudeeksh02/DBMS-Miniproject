@@ -37,7 +37,7 @@ DROP TABLE IF EXISTS lawyers CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS legal_resources CASCADE;
 
--- 5. Drop Custom Types (Enums)
+-- 5. Drop legacy ENUM types (created by earlier schema versions; the current schema uses CHECK constraints)
 DROP TYPE IF EXISTS custody_type CASCADE;
 DROP TYPE IF EXISTS payment_status CASCADE;
 DROP TYPE IF EXISTS settlement_type CASCADE;

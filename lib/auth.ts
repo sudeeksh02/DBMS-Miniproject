@@ -105,3 +105,36 @@ export async function getUserProfile(userId: string) {
 }
 
 export { SESSION_COOKIE_NAME };
+
+/**
+ * Case-level authorization for write operations.
+ * ADMIN: any case. LAWYER: only cases they are actively assigned to.
+ * CLIENT: only cases where they are a party. Throws FORBIDDEN otherwise.
+ */
+export async function assertCaseAccess(user: UserSession, caseId: string): Promise<void> {
+  if (user.role === 'ADMIN') return;
+  const res =
+    user.role === 'LAWYER'
+      ? await db.query(
+          'SELECT 1 FROM case_lawyers WHERE case_id = $1 AND lawyer_id = $2 AND is_active = TRUE',
+          [caseId, user.lawyerId || 'none']
+        )
+      : await db.query(
+          'SELECT 1 FROM case_parties WHERE case_id = $1 AND (client_id = $2 OR LOWER(email) = LOWER($3))',
+          [caseId, user.clientId || 'none', user.email]
+        );
+  if (res.rowCount === 0) {
+    throw new Error('FORBIDDEN: You are not authorized to modify this case.');
+  }
+}
+
+/**
+ * Map errors thrown by requireAuth() to the correct HTTP status:
+ * 401 when not logged in, 403 when the role is not allowed, otherwise `fallback`.
+ */
+export function authErrorStatus(error: unknown, fallback = 500): number {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  if (message.startsWith('UNAUTHORIZED')) return 401;
+  if (message.startsWith('FORBIDDEN')) return 403;
+  return fallback;
+}

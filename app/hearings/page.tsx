@@ -6,12 +6,12 @@ import {
   Calendar,
   Clock,
   Building,
-  CheckCircle2,
-  AlertCircle,
+  CircleCheck as CheckCircle2,
+  CircleAlert as AlertCircle,
   Plus,
   RefreshCw,
   Search,
-  Filter,
+  Funnel as Filter,
   ArrowRight,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';

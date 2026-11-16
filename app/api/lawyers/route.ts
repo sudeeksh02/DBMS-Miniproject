@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import db from '@/lib/db/postgres';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth, hashPassword } from '@/lib/auth';
+import { requireAuth, hashPassword, authErrorStatus } from '@/lib/auth';
 
 const createLawyerSchema = z.object({
   fullName: z.string().min(2, 'Name is required'),
@@ -53,7 +53,7 @@ export async function GET() {
     console.error('Fetch lawyers error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch lawyers', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
     console.error('Create lawyer error:', error);
     return NextResponse.json(
       { error: 'Failed to create lawyer', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

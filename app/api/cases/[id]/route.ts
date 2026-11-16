@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import db from '@/lib/db/postgres';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, authErrorStatus, assertCaseAccess } from '@/lib/auth';
 
 const updateCaseSchema = z.object({
   status: z.enum([
@@ -147,7 +147,7 @@ export async function GET(
     console.error('Fetch case detail error:', error);
     return NextResponse.json(
       { error: 'Failed to retrieve case details', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }
@@ -179,6 +179,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Case not found' }, { status: 404 });
     }
     const currentCase = existingRes.rows[0];
+
+    // Lawyers may only modify cases they are actively assigned to
+    await assertCaseAccess(user, caseId);
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -216,9 +219,17 @@ export async function PATCH(
       RETURNING *;
     `;
 
-    // Execute update in PostgreSQL (Triggers trg_case_status_audit and trg_cases_timestamp automatically execute)
-    const updateRes = await db.query(updateSql, values);
-    const updatedCase = updateRes.rows[0];
+    // Execute update in PostgreSQL (Triggers trg_case_status_audit and trg_cases_timestamp automatically execute).
+    // set_config(..., true) is transaction-local: it hands the acting user and reason to the audit trigger
+    // so case_status_history records WHO changed the status and WHY, not just 'SYSTEM_AUTO'.
+    const updatedCase = await db.transaction(async (tx) => {
+      await tx.query(
+        `SELECT set_config('dms.current_user_id', $1, true), set_config('dms.status_reason', $2, true)`,
+        [user.id, statusChangeReason || '']
+      );
+      const updateRes = await tx.query(updateSql, values);
+      return updateRes.rows[0];
+    });
 
     // Log status transition into MongoDB activity stream
     if (status && status !== currentCase.status) {
@@ -244,7 +255,7 @@ export async function PATCH(
     console.error('Update case error:', error);
     return NextResponse.json(
       { error: 'Failed to update case', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

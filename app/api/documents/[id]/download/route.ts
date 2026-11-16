@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, authErrorStatus } from '@/lib/auth';
 import { getFileBuffer } from '@/lib/storage';
 
 export async function GET(
@@ -40,7 +40,7 @@ export async function GET(
     console.error('Download document error:', error);
     return NextResponse.json(
       { error: 'Failed to retrieve document file', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

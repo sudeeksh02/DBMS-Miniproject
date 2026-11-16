@@ -4,78 +4,17 @@
 -- Target Engine: PostgreSQL 16+ (Normalized 3NF Architecture)
 -- ============================================================================
 
--- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- No extensions required: IDs are application-generated VARCHAR keys, and vector search
+-- uses the PL/pgSQL fn_cosine_similarity() below. This keeps the script runnable on the
+-- embedded PGlite engine, which does not ship contrib extensions such as uuid-ossp by default.
 
 -- ============================================================================
--- 1. ENUMS AND CUSTOM DOMAINS
+-- 1. DOMAIN INTEGRITY APPROACH
 -- ============================================================================
 
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
-        CREATE TYPE user_role AS ENUM ('ADMIN', 'LAWYER', 'CLIENT');
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'case_status') THEN
-        CREATE TYPE case_status AS ENUM (
-            'REGISTERED',
-            'UNDER_REVIEW',
-            'DOCUMENTATION_PENDING',
-            'MEDIATION',
-            'HEARING_SCHEDULED',
-            'SETTLEMENT_NEGOTIATION',
-            'AWAITING_FINAL_ORDER',
-            'RESOLVED',
-            'CLOSED'
-        );
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'case_priority') THEN
-        CREATE TYPE case_priority AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'URGENT');
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'party_role') THEN
-        CREATE TYPE party_role AS ENUM ('PETITIONER', 'RESPONDENT');
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'hearing_type') THEN
-        CREATE TYPE hearing_type AS ENUM (
-            'PRELIMINARY',
-            'MEDIATION_SESSION',
-            'EVIDENCE_PRESENTATION',
-            'CROSS_EXAMINATION',
-            'FINAL_ARGUMENTS',
-            'JUDGMENT_PRONOUNCEMENT'
-        );
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'hearing_outcome') THEN
-        CREATE TYPE hearing_outcome AS ENUM (
-            'SCHEDULED',
-            'ADJOURNED',
-            'SETTLEMENT_REACHED',
-            'ORDER_PASSED',
-            'DISMISSED',
-            'CONCLUDED'
-        );
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'settlement_type') THEN
-        CREATE TYPE settlement_type AS ENUM (
-            'LUMP_SUM',
-            'MONTHLY_ALIMONY',
-            'CHILD_SUPPORT',
-            'PROPERTY_DIVISION',
-            'HYBRID'
-        );
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_status') THEN
-        CREATE TYPE payment_status AS ENUM ('PENDING', 'PARTIALLY_PAID', 'COMPLETED', 'DEFAULTED');
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'custody_type') THEN
-        CREATE TYPE custody_type AS ENUM (
-            'SOLE_PETITIONER',
-            'SOLE_RESPONDENT',
-            'JOINT_LEGAL',
-            'SHARED_PHYSICAL',
-            'THIRD_PARTY_GUARDIAN'
-        );
-    END IF;
-END $$;
+-- Domain integrity is enforced with CHECK constraints on VARCHAR columns (see each table),
+-- e.g. CHECK (status IN ('REGISTERED', ...)). CHECK lists can be extended with a single
+-- ALTER TABLE, unlike ENUM types, and they behave identically on PostgreSQL and PGlite.
 
 -- ============================================================================
 -- 2. BASE ENTITY TABLES
@@ -164,7 +103,7 @@ CREATE TABLE IF NOT EXISTS case_parties (
     party_role VARCHAR(15) NOT NULL,
     full_name VARCHAR(150) NOT NULL,
     gender VARCHAR(10) DEFAULT 'OTHER',
-    dateOfBirth DATE,
+    date_of_birth DATE,
     email VARCHAR(255),
     phone_number VARCHAR(25),
     current_address TEXT,
@@ -290,7 +229,7 @@ CREATE TABLE IF NOT EXISTS case_status_history (
     CONSTRAINT fk_history_case FOREIGN KEY (case_id) REFERENCES divorce_cases(id) ON DELETE CASCADE
 );
 
--- TABLE: legal_resources (pgvector semantic search)
+-- TABLE: legal_resources (vector semantic search; 16-D embeddings stored as FLOAT8[])
 CREATE TABLE IF NOT EXISTS legal_resources (
     id VARCHAR(36) PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -308,19 +247,27 @@ CREATE TABLE IF NOT EXISTS legal_resources (
 -- 3. INDEXES FOR QUERY OPTIMIZATION
 -- ============================================================================
 
-CREATE INDEX IF NOT EXISTS idx_cases_reference_number ON divorce_cases(reference_number);
-CREATE INDEX IF NOT EXISTS idx_cases_status ON divorce_cases(status);
+-- (reference_number is already indexed by its UNIQUE constraint)
+-- (status lookups use the leading column of idx_cases_status_priority below)
 CREATE INDEX IF NOT EXISTS idx_cases_filing_date ON divorce_cases(filing_date);
 CREATE INDEX IF NOT EXISTS idx_cases_priority ON divorce_cases(priority);
 CREATE INDEX IF NOT EXISTS idx_hearings_date ON hearings(hearing_date);
 CREATE INDEX IF NOT EXISTS idx_hearings_case_id ON hearings(case_id);
-CREATE INDEX IF NOT EXISTS idx_hearings_lawyer_id ON hearings(assigned_lawyer_id);
+-- (lawyer lookups on hearings are served by the composite idx_hearings_lawyer_date below)
 CREATE INDEX IF NOT EXISTS idx_case_lawyers_lawyer ON case_lawyers(lawyer_id);
 CREATE INDEX IF NOT EXISTS idx_case_parties_case ON case_parties(case_id);
 CREATE INDEX IF NOT EXISTS idx_case_parties_client ON case_parties(client_id);
-CREATE INDEX IF NOT EXISTS idx_payments_settlement ON payments(settlement_id);
+-- (settlement_id lookups use the leading column of idx_payments_settlement_date below)
 CREATE INDEX IF NOT EXISTS idx_status_history_case ON case_status_history(case_id);
 CREATE INDEX IF NOT EXISTS idx_legal_resources_category ON legal_resources(category);
+
+-- Composite B-tree indexes
+-- (status, priority): dashboard / case-registry filters on both columns
+CREATE INDEX IF NOT EXISTS idx_cases_status_priority ON divorce_cases(status, priority);
+-- (assigned_lawyer_id, hearing_date): advocate conflict-detection range scan
+CREATE INDEX IF NOT EXISTS idx_hearings_lawyer_date ON hearings(assigned_lawyer_id, hearing_date);
+-- (settlement_id, payment_date): ledger aggregation and running-total queries
+CREATE INDEX IF NOT EXISTS idx_payments_settlement_date ON payments(settlement_id, payment_date);
 
 -- ============================================================================
 -- 4. VIEWS (DATABASE ABSTRACTION & REPORTING)
@@ -343,19 +290,27 @@ SELECT
     l.bar_registration_number AS lead_lawyer_bar_reg,
     COUNT(h.id) AS total_hearings_count
 FROM divorce_cases c
-LEFT JOIN case_parties petitioner 
+LEFT JOIN case_parties petitioner
     ON c.id = petitioner.case_id AND petitioner.party_role = 'PETITIONER'
-LEFT JOIN case_parties respondent 
+LEFT JOIN case_parties respondent
     ON c.id = respondent.case_id AND respondent.party_role = 'RESPONDENT'
-LEFT JOIN case_lawyers cl 
-    ON c.id = cl.case_id AND cl.is_lead_counsel = TRUE AND cl.is_active = TRUE
-LEFT JOIN lawyers l 
-    ON cl.lawyer_id = l.id
-LEFT JOIN users u_lawyer 
+-- One lead counsel per case (petitioner's counsel preferred) so cases with
+-- counsel on both sides are not duplicated and hearings are not double-counted
+LEFT JOIN LATERAL (
+    SELECT cl.lawyer_id
+    FROM case_lawyers cl
+    WHERE cl.case_id = c.id AND cl.is_lead_counsel = TRUE AND cl.is_active = TRUE
+    ORDER BY (cl.representing_role = 'PETITIONER') DESC, cl.assigned_at ASC
+    LIMIT 1
+) lead ON TRUE
+LEFT JOIN lawyers l
+    ON lead.lawyer_id = l.id
+LEFT JOIN users u_lawyer
     ON l.user_id = u_lawyer.id
-LEFT JOIN hearings h 
+LEFT JOIN hearings h
     ON c.id = h.case_id
-GROUP BY 
+WHERE c.status NOT IN ('RESOLVED', 'CLOSED')
+GROUP BY
     c.id, c.reference_number, c.case_title, c.divorce_category, c.status,
     c.priority, c.filing_date, c.presiding_court, petitioner.full_name,
     respondent.full_name, u_lawyer.full_name, l.bar_registration_number;
@@ -434,8 +389,11 @@ DECLARE
     v_count INT;
     v_new_ref VARCHAR;
 BEGIN
-    SELECT COUNT(*) + 1 INTO v_count 
-    FROM divorce_cases 
+    -- MAX(suffix)+1 rather than COUNT(*)+1, so deleting a case can never cause
+    -- a duplicate reference number (UNIQUE violation) on the next registration
+    SELECT COALESCE(MAX(CAST(SUBSTRING(reference_number FROM '^DIV-[0-9]{4}-([0-9]+)$') AS INT)), 0) + 1
+    INTO v_count
+    FROM divorce_cases
     WHERE reference_number LIKE 'DIV-' || v_year || '-%';
     
     v_new_ref := 'DIV-' || v_year || '-' || LPAD(v_count::TEXT, 4, '0');
@@ -497,8 +455,13 @@ BEGIN
             NEW.id,
             OLD.status,
             NEW.status,
-            'SYSTEM_AUTO',
-            'Automated trigger status transition recorded from ' || OLD.status || ' to ' || NEW.status,
+            -- Acting user / reason are passed in by the application via transaction-local
+            -- settings (set_config(..., true)); falls back to SYSTEM_AUTO for direct SQL updates
+            COALESCE(NULLIF(current_setting('dms.current_user_id', true), ''), 'SYSTEM_AUTO'),
+            COALESCE(
+                NULLIF(current_setting('dms.status_reason', true), ''),
+                'Automated trigger status transition recorded from ' || OLD.status || ' to ' || NEW.status
+            ),
             CURRENT_TIMESTAMP
         );
     END IF;

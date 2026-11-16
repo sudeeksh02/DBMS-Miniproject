@@ -12,8 +12,8 @@ import {
   Heart,
   MessageSquare,
   Clock,
-  CheckCircle2,
-  AlertCircle,
+  CircleCheck as CheckCircle2,
+  CircleAlert as AlertCircle,
   Plus,
   RefreshCw,
   Send,
@@ -21,7 +21,7 @@ import {
   ArrowLeft,
   ChevronRight,
   Shield,
-  Loader2,
+  LoaderCircle as Loader2,
   FileUp,
   Download,
 } from 'lucide-react';
@@ -500,6 +500,9 @@ export default function CaseDetailPage({ params }: { params: Promise<{ id: strin
                           </span>
                         </div>
                         <p className="text-slate-500 text-[11px] mt-1">{hist.reason || 'Status transition committed.'}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          By: {hist.changed_by_name || (hist.changed_by_user_id === 'SYSTEM_AUTO' ? 'System (trigger)' : hist.changed_by_user_id || 'Unknown')}
+                        </p>
                         {hist.previous_status && (
                           <p className="text-[10px] text-slate-400 mt-0.5">
                             From: <span className="line-through">{hist.previous_status}</span>

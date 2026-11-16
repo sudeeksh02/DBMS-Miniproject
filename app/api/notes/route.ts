@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, authErrorStatus } from '@/lib/auth';
 
 const noteSchema = z.object({
   caseId: z.string().min(1, 'Case ID is required'),
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ notes });
   } catch (error: any) {
     console.error('Fetch notes error:', error);
-    return NextResponse.json({ error: 'Failed to fetch notes', message: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch notes', message: error.message }, { status: authErrorStatus(error, 500) });
   }
 }
 
@@ -65,6 +65,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, note });
   } catch (error: any) {
     console.error('Save note error:', error);
-    return NextResponse.json({ error: 'Failed to record case note', message: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to record case note', message: error.message }, { status: authErrorStatus(error, 500) });
   }
 }

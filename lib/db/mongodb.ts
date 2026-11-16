@@ -78,6 +78,10 @@ class MongoManager {
   private client: MongoClient | null = null;
   private db: Db | null = null;
   private isConnected = false;
+  // When MongoDB is unreachable, wait before retrying so every request
+  // does not pay the 2s server-selection timeout again
+  private lastFailedAttempt = 0;
+  private static readonly RETRY_COOLDOWN_MS = 30_000;
   private fallbackDir = path.join(process.cwd(), 'data', 'mongodb_fallback');
 
   constructor() {
@@ -89,6 +93,10 @@ class MongoManager {
   private async connect(): Promise<Db | null> {
     if (this.isConnected && this.db) {
       return this.db;
+    }
+
+    if (Date.now() - this.lastFailedAttempt < MongoManager.RETRY_COOLDOWN_MS) {
+      return null;
     }
 
     const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
@@ -109,6 +117,15 @@ class MongoManager {
     } catch (err: any) {
       console.warn(`[MongoDB] Live connection to ${uri} failed (${err.message}). Using persistent JSON fallback store.`);
       this.isConnected = false;
+      this.lastFailedAttempt = Date.now();
+      try {
+        await this.client?.close();
+      } catch {
+        // ignore close errors on a client that never connected
+      }
+      this.client = null;
+      this.db = null;
+      await this.seedInitialMongoData();
       return null;
     }
   }
@@ -457,9 +474,13 @@ class MongoManager {
   }
 
   private async seedInitialMongoData() {
-    if (!this.db) return;
+    // Seeds the live MongoDB collections, or - when MongoDB is unreachable - the JSON
+    // fallback store, so timelines / documents / analytics are populated in both modes
+    const live = this.db;
     try {
-      const count = await this.db.collection('case_activities').countDocuments();
+      const count = live
+        ? await live.collection('case_activities').countDocuments()
+        : fs.existsSync(path.join(this.fallbackDir, 'case_activities.json')) ? 1 : 0;
       if (count === 0) {
         console.log('[MongoDB] Populating initial synthetic document collections...');
         const initialActivities: CaseActivityDoc[] = [
@@ -542,7 +563,7 @@ class MongoManager {
           },
         ];
 
-        await this.db.collection('case_activities').insertMany(initialActivities);
+        if (live) await live.collection('case_activities').insertMany(initialActivities);
 
         // Seed initial documents metadata
         const initialDocs: CaseDocumentDoc[] = [
@@ -608,7 +629,7 @@ class MongoManager {
           },
         ];
 
-        await this.db.collection('case_documents').insertMany(initialDocs);
+        if (live) await live.collection('case_documents').insertMany(initialDocs);
 
         // Seed initial communications
         const initialComms: CaseCommunicationDoc[] = [
@@ -632,7 +653,7 @@ class MongoManager {
           },
         ];
 
-        await this.db.collection('case_communications').insertMany(initialComms);
+        if (live) await live.collection('case_communications').insertMany(initialComms);
 
         // Seed initial notes
         const initialNotes: CaseNoteDoc[] = [
@@ -649,13 +670,15 @@ class MongoManager {
           },
         ];
 
-        await this.db.collection('case_notes').insertMany(initialNotes);
+        if (live) await live.collection('case_notes').insertMany(initialNotes);
 
         // Write fallback backup as well
-        this.writeFallbackCollection('case_activities', initialActivities);
-        this.writeFallbackCollection('case_documents', initialDocs);
-        this.writeFallbackCollection('case_communications', initialComms);
-        this.writeFallbackCollection('case_notes', initialNotes);
+        const withIds = <T extends { _id?: any }>(prefix: string, docs: T[]): T[] =>
+          docs.map((d, i) => ({ ...d, _id: d._id ? String(d._id) : `${prefix}_seed_${i + 1}` }));
+        this.writeFallbackCollection('case_activities', withIds('act', initialActivities));
+        this.writeFallbackCollection('case_documents', withIds('doc', initialDocs));
+        this.writeFallbackCollection('case_communications', withIds('comm', initialComms));
+        this.writeFallbackCollection('case_notes', withIds('note', initialNotes));
 
         console.log('[MongoDB] Initial collections populated successfully.');
       }

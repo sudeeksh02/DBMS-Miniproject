@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import db from '@/lib/db/postgres';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, authErrorStatus } from '@/lib/auth';
 
 export async function POST() {
   try {
@@ -35,7 +35,7 @@ export async function POST() {
     console.error('System reset error:', error);
     return NextResponse.json(
       { error: 'Failed to reset database', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

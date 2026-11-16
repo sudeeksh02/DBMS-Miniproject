@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import db from '@/lib/db/postgres';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, authErrorStatus, assertCaseAccess } from '@/lib/auth';
 
 const createSettlementSchema = z.object({
   caseId: z.string().min(1, 'Case ID is required'),
@@ -20,7 +20,7 @@ const createSettlementSchema = z.object({
 // GET: Retrieve settlements with payment history and ledger stats
 export async function GET(request: Request) {
   try {
-    await requireAuth();
+    const user = await requireAuth();
     const { searchParams } = new URL(request.url);
     const caseId = searchParams.get('caseId');
 
@@ -40,6 +40,23 @@ export async function GET(request: Request) {
     `;
 
     const params: any[] = [];
+
+    // Role-based scoping: clients see only their own cases, lawyers only cases they are assigned to
+    if (user.role === 'CLIENT') {
+      params.push(user.clientId || 'none', user.email);
+      sql += ` AND EXISTS (
+        SELECT 1 FROM case_parties cp
+        WHERE cp.case_id = c.id
+          AND (cp.client_id = $${params.length - 1} OR LOWER(cp.email) = LOWER($${params.length}))
+      )`;
+    } else if (user.role === 'LAWYER') {
+      params.push(user.lawyerId || 'none');
+      sql += ` AND EXISTS (
+        SELECT 1 FROM case_lawyers cl
+        WHERE cl.case_id = c.id AND cl.lawyer_id = $${params.length} AND cl.is_active = TRUE
+      )`;
+    }
+
     if (caseId) {
       params.push(caseId);
       sql += ` AND s.case_id = $${params.length}`;
@@ -53,7 +70,7 @@ export async function GET(request: Request) {
     console.error('Fetch settlements error:', error);
     return NextResponse.json(
       { error: 'Failed to retrieve settlements', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }
@@ -73,6 +90,7 @@ export async function POST(request: Request) {
     }
 
     const data = parsed.data;
+    await assertCaseAccess(user, data.caseId);
 
     // Check if settlement already exists for case
     const existing = await db.query('SELECT id FROM settlements WHERE case_id = $1', [data.caseId]);
@@ -148,7 +166,7 @@ export async function POST(request: Request) {
     console.error('Save settlement error:', error);
     return NextResponse.json(
       { error: 'Failed to record settlement terms', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }

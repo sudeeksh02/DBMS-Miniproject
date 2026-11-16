@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import db from '@/lib/db/postgres';
 import mongo from '@/lib/db/mongodb';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, authErrorStatus, assertCaseAccess } from '@/lib/auth';
 
 const scheduleHearingSchema = z.object({
   caseId: z.string().min(1, 'Case ID is required'),
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
     console.error('Fetch hearings error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch court hearings', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }
@@ -118,6 +118,7 @@ export async function POST(request: Request) {
     }
 
     const data = parsed.data;
+    await assertCaseAccess(user, data.caseId);
     const hearingDate = new Date(data.hearingDate);
 
     // Validate that hearing is in future
@@ -137,7 +138,8 @@ export async function POST(request: Request) {
     }
 
     // ADVANCED DATABASE CHECK: LAWYER CONFLICT DETECTION
-    // Prevent overlapping hearing times within a 2-hour window (7200 seconds) for the same counsel
+    // Prevent overlapping hearing times within a 45-minute window (either side) for the same counsel.
+    // Range predicate on hearing_date (not ABS(EXTRACT(...))) so the idx_hearings_date / lawyer indexes stay usable.
     if (lawyerId) {
       const conflictSql = `
         SELECT 
@@ -153,7 +155,8 @@ export async function POST(request: Request) {
         JOIN users u ON l.user_id = u.id
         WHERE h.assigned_lawyer_id = $1
           AND h.outcome = 'SCHEDULED'
-          AND ABS(EXTRACT(EPOCH FROM (h.hearing_date - $2::timestamp with time zone))) < 7200
+          AND h.hearing_date > ($2::timestamp with time zone - INTERVAL '45 minutes')
+          AND h.hearing_date < ($2::timestamp with time zone + INTERVAL '45 minutes')
         LIMIT 1;
       `;
 
@@ -162,7 +165,7 @@ export async function POST(request: Request) {
         const conflict = conflictRes.rows[0];
         return NextResponse.json(
           {
-            error: 'CONFLICTING_SCHEDULE: Lawyer already has a court appearance scheduled within this 2-hour window.',
+            error: 'CONFLICTING_SCHEDULE: Lawyer already has a court appearance scheduled within 45 minutes of the requested time.',
             conflictingHearing: {
               caseReference: conflict.reference_number,
               caseTitle: conflict.case_title,
@@ -227,7 +230,7 @@ export async function POST(request: Request) {
     console.error('Schedule hearing error:', error);
     return NextResponse.json(
       { error: 'Failed to schedule hearing', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }
@@ -247,6 +250,12 @@ export async function PATCH(request: Request) {
     }
 
     const { hearingId, outcome, summaryNotes, nextHearingDate } = parsed.data;
+
+    const hearingCaseRes = await db.query('SELECT case_id FROM hearings WHERE id = $1', [hearingId]);
+    if (hearingCaseRes.rowCount === 0) {
+      return NextResponse.json({ error: 'Hearing not found' }, { status: 404 });
+    }
+    await assertCaseAccess(user, hearingCaseRes.rows[0].case_id);
 
     const res = await db.query(
       `UPDATE hearings 
@@ -286,7 +295,7 @@ export async function PATCH(request: Request) {
     console.error('Update hearing outcome error:', error);
     return NextResponse.json(
       { error: 'Failed to update hearing outcome', message: error.message },
-      { status: 500 }
+      { status: authErrorStatus(error, 500) }
     );
   }
 }
