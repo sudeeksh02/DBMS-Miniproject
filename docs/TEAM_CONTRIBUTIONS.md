@@ -7,7 +7,7 @@
 | **SRN** | PES1UG24CS474 | PES1UG24CS473 |
 | **Role** | Design & Implementation Lead | Verification, Hardening & Documentation Lead |
 
-**Academic Year**: 2026–2027 · **Semester / Section**: 5 / ______ · **Faculty Guide**: ______________________
+**Academic Year**: 2026–2027 · **Semester / Section**: 5 / H
 
 ---
 

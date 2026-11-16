@@ -7,8 +7,7 @@
 | **Institution** | PES University, Bengaluru |
 | **Academic Year** | 2026–2027 |
 | **Team** | Sudeeksh Nayak (PES1UG24CS474): design & implementation<br>Subramani B M (PES1UG24CS473): verification, fixes & documentation |
-| **Semester / Section** | 5 / ______ |
-| **Faculty Guide** | ______________________ |
+| **Semester / Section** | 5 / H |
 
 ---
 
