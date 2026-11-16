@@ -6,9 +6,9 @@
 | **Course** | Database Management Systems (DBMS) Mini-Project |
 | **Institution** | PES University, Bengaluru |
 | **Academic Year** | 2026–2027 |
-| **Team** | {{MEMBER_1_NAME}} ({{MEMBER_1_SRN}}), {{MEMBER_2_NAME}} ({{MEMBER_2_SRN}}) |
-| **Semester / Section** | {{SEMESTER}} / {{SECTION}} |
-| **Faculty Guide** | {{GUIDE_NAME}} |
+| **Team** | Sudeeksh Nayak (PES1UG24CS474): design & implementation<br>Subramani B M (PES1UG24CS473): verification, fixes & documentation |
+| **Semester / Section** | 5 / ______ |
+| **Faculty Guide** | ______________________ |
 
 ---
 
