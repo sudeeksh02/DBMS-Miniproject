@@ -15,10 +15,12 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
+import { Sidebar } from '@/components/layout/Sidebar';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, PriorityBadge } from '@/components/ui/StatusBadge';
 
 export default function LawyerDashboardPage() {
+  const [user, setUser] = useState<any>(null);
   const [cases, setCases] = useState<any[]>([]);
   const [hearings, setHearings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,8 +47,16 @@ export default function LawyerDashboardPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => { if (d.authenticated) setUser(d.user); })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="flex min-h-screen bg-slate-50">
+      <Sidebar user={user} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header
           title="Legal Counsel Workstation"

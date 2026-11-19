@@ -17,9 +17,11 @@ import {
   LoaderCircle as Loader2,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
+import { Sidebar } from '@/components/layout/Sidebar';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 
 export default function ClientDashboardPage() {
+  const [user, setUser] = useState<any>(null);
   const [cases, setCases] = useState<any[]>([]);
   const [selectedCase, setSelectedCase] = useState<any>(null);
   const [caseDetails, setCaseDetails] = useState<any>(null);
@@ -97,8 +99,16 @@ export default function ClientDashboardPage() {
 
   const currentStepIndex = selectedCase ? LIFECYCLE_STEPS.indexOf(selectedCase.status) : 0;
 
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => { if (d.authenticated) setUser(d.user); })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="flex min-h-screen bg-slate-50">
+      <Sidebar user={user} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header
           title="Litigant Client Portal"

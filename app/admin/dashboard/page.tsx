@@ -29,7 +29,7 @@ import {
   Cell,
   CartesianGrid,
 } from 'recharts';
-import { AppLayout } from '@/components/layout/AppLayout';
+import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -37,6 +37,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 const STATUS_COLORS = ['#3B82F6', '#8B5CF6', '#F59E0B', '#10B981', '#EC4899', '#64748B'];
 
 export default function AdminDashboardPage() {
+  const [user, setUser] = useState<any>(null);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,9 +61,16 @@ export default function AdminDashboardPage() {
     fetchAnalytics();
   }, []);
 
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => { if (d.authenticated) setUser(d.user); })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="flex min-h-screen bg-slate-50">
-      {/* We can render the page with Header and standard layout */}
+      <Sidebar user={user} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header
           title="Administrative Case Control Center"
