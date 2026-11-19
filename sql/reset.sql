@@ -21,6 +21,9 @@ DROP FUNCTION IF EXISTS fn_trg_update_timestamp() CASCADE;
 
 -- 3. Drop Custom Functions & Stored Procedures
 DROP FUNCTION IF EXISTS fn_generate_case_reference() CASCADE;
+DROP PROCEDURE IF EXISTS sp_schedule_hearing(VARCHAR, VARCHAR, TIMESTAMP WITH TIME ZONE, VARCHAR);
+DROP PROCEDURE IF EXISTS sp_record_payment(VARCHAR, NUMERIC, VARCHAR, VARCHAR);
+DROP PROCEDURE IF EXISTS sp_update_case_status(VARCHAR, VARCHAR, VARCHAR, TEXT);
 DROP FUNCTION IF EXISTS fn_cosine_similarity(FLOAT8[], FLOAT8[]) CASCADE;
 
 -- 4. Drop Tables in Foreign Key Dependency Order

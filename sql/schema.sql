@@ -433,6 +433,142 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
+-- ----------------------------------------------------------------------------
+-- STORED PROCEDURES (CREATE PROCEDURE ... invoked with CALL)
+-- Unlike functions, procedures are called with CALL, return no value, and bundle
+-- a whole business operation (validation + several writes) into one atomic unit.
+-- Each CALL runs in a single transaction: if any RAISE EXCEPTION fires, every
+-- change made by the procedure is rolled back.
+-- ----------------------------------------------------------------------------
+
+-- Procedure 1: Move a case to a new lifecycle status.
+-- The audit row itself is written by trigger trg_case_status_audit; this procedure
+-- hands it the acting user and reason through transaction-local settings.
+-- Usage: CALL sp_update_case_status('<case_id>', 'MEDIATION', '<user_id>', 'Parties agreed to mediation');
+CREATE OR REPLACE PROCEDURE sp_update_case_status(
+    p_case_id    VARCHAR,
+    p_new_status VARCHAR,
+    p_user_id    VARCHAR,
+    p_reason     TEXT DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_old_status VARCHAR(30);
+BEGIN
+    SELECT status INTO v_old_status FROM divorce_cases WHERE id = p_case_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Case % not found', p_case_id;
+    END IF;
+
+    IF v_old_status = p_new_status THEN
+        RAISE EXCEPTION 'Case is already in status %', p_new_status;
+    END IF;
+
+    -- Seen by fn_trg_case_status_audit(); "true" = local to this transaction only
+    PERFORM set_config('dms.current_user_id', COALESCE(p_user_id, ''), true);
+    PERFORM set_config('dms.status_reason', COALESCE(p_reason, ''), true);
+
+    UPDATE divorce_cases
+    SET status = p_new_status,
+        resolution_date = CASE
+            WHEN p_new_status IN ('RESOLVED', 'CLOSED') THEN COALESCE(resolution_date, CURRENT_DATE)
+            ELSE resolution_date
+        END
+    WHERE id = p_case_id;   -- CHECK constraint rejects an invalid status here
+
+    RAISE NOTICE 'Case % moved from % to %', p_case_id, v_old_status, p_new_status;
+END;
+$$;
+
+-- Procedure 2: Record a payment and recompute the settlement's payment_status.
+-- Usage: CALL sp_record_payment('<settlement_id>', 25000, 'Bank Transfer', 'TXN-1001');
+CREATE OR REPLACE PROCEDURE sp_record_payment(
+    p_settlement_id VARCHAR,
+    p_amount        NUMERIC,
+    p_method        VARCHAR,
+    p_reference     VARCHAR
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_total_agreed NUMERIC;
+    v_total_paid   NUMERIC;
+    v_new_status   VARCHAR(20);
+BEGIN
+    IF p_amount IS NULL OR p_amount <= 0 THEN
+        RAISE EXCEPTION 'Payment amount must be positive (got %)', p_amount;
+    END IF;
+
+    SELECT total_agreed_amount INTO v_total_agreed
+    FROM settlements WHERE id = p_settlement_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Settlement % not found', p_settlement_id;
+    END IF;
+
+    INSERT INTO payments (id, settlement_id, amount_paid, payment_method, transaction_reference)
+    VALUES (
+        'pay-' || substr(md5(random()::text || clock_timestamp()::text), 1, 16),
+        p_settlement_id, p_amount, COALESCE(p_method, 'Bank Transfer'), p_reference
+    );   -- duplicate p_reference violates the UNIQUE constraint and aborts the call
+
+    SELECT COALESCE(SUM(amount_paid), 0) INTO v_total_paid
+    FROM payments WHERE settlement_id = p_settlement_id;
+
+    IF v_total_agreed > 0 AND v_total_paid >= v_total_agreed THEN
+        v_new_status := 'COMPLETED';
+    ELSE
+        v_new_status := 'PARTIALLY_PAID';
+    END IF;
+
+    UPDATE settlements SET payment_status = v_new_status WHERE id = p_settlement_id;
+
+    RAISE NOTICE 'Settlement %: paid % of % -> %', p_settlement_id, v_total_paid, v_total_agreed, v_new_status;
+END;
+$$;
+
+-- Procedure 3: Schedule a hearing with lawyer conflict detection.
+-- The range predicate is served by the composite B-tree idx_hearings_lawyer_date.
+-- Usage: CALL sp_schedule_hearing('<case_id>', '<lawyer_id>', '2026-12-01 10:30+05:30', 'PRELIMINARY');
+CREATE OR REPLACE PROCEDURE sp_schedule_hearing(
+    p_case_id      VARCHAR,
+    p_lawyer_id    VARCHAR,
+    p_hearing_date TIMESTAMP WITH TIME ZONE,
+    p_hearing_type VARCHAR DEFAULT 'PRELIMINARY'
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_clash TIMESTAMP WITH TIME ZONE;
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM divorce_cases WHERE id = p_case_id) THEN
+        RAISE EXCEPTION 'Case % not found', p_case_id;
+    END IF;
+
+    IF p_lawyer_id IS NOT NULL THEN
+        SELECT hearing_date INTO v_clash
+        FROM hearings
+        WHERE assigned_lawyer_id = p_lawyer_id
+          AND outcome = 'SCHEDULED'
+          AND hearing_date > p_hearing_date - INTERVAL '45 minutes'
+          AND hearing_date < p_hearing_date + INTERVAL '45 minutes'
+        LIMIT 1;
+
+        IF FOUND THEN
+            RAISE EXCEPTION 'CONFLICTING_SCHEDULE: lawyer already has a hearing at % (within 45 minutes)', v_clash;
+        END IF;
+    END IF;
+
+    INSERT INTO hearings (id, case_id, assigned_lawyer_id, hearing_date, hearing_type)
+    VALUES (
+        'hrg-' || substr(md5(random()::text || clock_timestamp()::text), 1, 16),
+        p_case_id, p_lawyer_id, p_hearing_date, p_hearing_type
+    );
+
+    RAISE NOTICE 'Hearing scheduled for case % at %', p_case_id, p_hearing_date;
+END;
+$$;
+
 -- ============================================================================
 -- 6. DATABASE TRIGGERS
 -- ============================================================================
